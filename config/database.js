@@ -1,15 +1,18 @@
 const mongoose = require("mongoose");
+const getEnvironment = require("./environment");
+const log = require("../utils/logger");
+
+mongoose.set("bufferCommands", false);
 
 async function connectDatabase() {
-  const uri = process.env.MONGODB_URI;
-
-  if (!uri) {
-    console.log("MONGODB_URI is not set; starting without a database connection.");
-    return null;
+  const { mongoUri } = getEnvironment();
+  try {
+    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000, maxPoolSize: 20 });
+  } catch {
+    // Driver errors may contain the connection string; do not expose it.
+    throw new Error("MongoDB connection failed. Check configuration and that MongoDB is running.");
   }
-
-  await mongoose.connect(uri);
-  console.log("Connected to MongoDB.");
+  log("info", "database.connected");
   return mongoose.connection;
 }
 

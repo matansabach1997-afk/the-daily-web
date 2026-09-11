@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { contentLimits } = require("../config/articleRules");
 
 const contentSchema = new mongoose.Schema(
   {
@@ -29,6 +30,11 @@ const contentSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
+// Size limits do not make incomplete draft fields required.
+for (const [field, maximum] of Object.entries(contentLimits)) {
+  contentSchema.path(field).maxlength(maximum);
+}
 
 const articleSchema = new mongoose.Schema(
   {
@@ -71,5 +77,13 @@ const articleSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+articleSchema.index({ reporter: 1, updatedAt: -1, _id: -1 });
+articleSchema.index({ reporter: 1, status: 1, updatedAt: -1, _id: -1 });
+articleSchema.index({ status: 1, updatedAt: -1, _id: -1 });
+articleSchema.index({ updatedAt: -1, _id: -1 });
+articleSchema.index({ publishedAt: -1, _id: -1 }, {
+  partialFilterExpression: { publishedAt: { $type: "date" } },
+});
 
 module.exports = mongoose.model("Article", articleSchema);

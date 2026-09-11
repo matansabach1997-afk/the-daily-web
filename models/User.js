@@ -7,10 +7,13 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
       trim: true,
+      minlength: 3,
+      maxlength: 40,
     },
     passwordHash: {
       type: String,
       required: true,
+      select: false,
     },
     role: {
       type: String,

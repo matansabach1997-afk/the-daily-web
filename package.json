@@ -1,11 +1,16 @@
 {
   "name": "the-daily-web",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "The Daily Web university MVC application",
+  "main": "app.js",
   "scripts": {
-    "start": "node app.js",
-    "test": "node scripts/smoke-test.js"
+    "start": "node --env-file-if-exists=.env app.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "test:unit": "node --test tests/runtime.test.js tests/password.test.js tests/articleValidation.test.js",
+    "test:smoke": "node scripts/smoke-test.js",
+    "check:syntax": "node scripts/check-syntax.js",
+    "user:create": "node --env-file-if-exists=.env scripts/create-user.js",
+    "db:indexes": "node --env-file-if-exists=.env scripts/setup-indexes.js"
   },
   "repository": {
     "type": "git",
