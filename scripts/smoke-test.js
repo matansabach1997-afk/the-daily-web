@@ -1,13 +1,12 @@
 const app = require("../app");
+const { openDatabase, closeDatabase, startHttp, stopHttp } = require("../tests/helpers");
 
 async function run() {
-  const server = app.listen(0);
-  await new Promise((resolve) => server.once("listening", resolve));
-
-  const { port } = server.address();
-  const baseUrl = `http://127.0.0.1:${port}`;
-
+  let database, http;
   try {
+    database = await openDatabase("smoke");
+    http = await startHttp(app);
+    const { baseUrl } = http;
     const checks = [
       { path: "/", status: 200, contentType: "text/html" },
       { path: "/health", status: 200, contentType: "application/json" },
@@ -30,9 +29,8 @@ async function run() {
       console.log(`PASS ${check.path} -> ${response.status}`);
     }
   } finally {
-    await new Promise((resolve, reject) => {
-      server.close((error) => (error ? reject(error) : resolve()));
-    });
+    await stopHttp(http?.server);
+    await closeDatabase(database);
   }
 }
 
