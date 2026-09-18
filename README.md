@@ -48,11 +48,20 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 - Draft creation, working-content save, submission, return, approval, Start Revision and hard deletion.
 - Safe MongoDB-backed public list/detail APIs with batches of 20 and cursor pagination.
 - Shared validation, controlled API errors, request IDs and sanitized operational logs.
+- Shared EJS header/navigation/footer, base styling and browser Login/Logout using the existing auth APIs.
 - Automated tests using Node's built-in test runner, including real process-restart session persistence.
 
 `publishedAt` always means **first publication**. Each approval appends its timestamp to `publicationHistory`. A pending/returned/draft revision never hides or replaces the previous public content.
 
-Not implemented here: Reporter/autosave UI, public feed/search/filter/infinite-scroll UI, full article EJS/SEO page, viewed state, Editor UI, Comments, BrowserIdentity, ReadReceipt, ViewStat/analytics/popularity, Weather, large seed or responsive feature layouts. The existing home/error templates and assets remain skeletons.
+Not implemented here: Reporter/autosave UI, public feed/search/filter/infinite-scroll UI, full article EJS/SEO page, viewed state, Editor UI, Comments, BrowserIdentity, ReadReceipt, ViewStat/analytics/popularity, Weather, large seed or responsive feature layouts. Home remains a skeleton inside the shared responsive shell, not a news feed.
+
+## Shared UI foundation
+
+Open `/login` and use an account created through the existing account script or User API. The browser submits to `POST /api/auth/login`; MongoDB stores the existing Session and the browser retains its HttpOnly cookie. Successful login returns to `/`. Authenticated visitors to `/login` are redirected to `/`; there are no placeholder workspace links.
+
+Navigation displays the current username/role. `public/js/main.js` checks `GET /api/auth/session` on page display (including Back/Forward restores) and sends `DELETE /api/auth/session` for Logout. `public/js/login.js` handles only the login form. Neither script stores credentials/tokens or decides server permissions. Login/Logout require JavaScript; the login fields remain disabled until their submit handler is attached, preventing accidental password submission in a URL.
+
+New pages should reuse `views/partials/header.ejs`, `navigation.ejs` and `footer.ejs`, with their own `<main id="main-content">`. Use `public/css/base.css` for the shell, and page-specific CSS/JS for features. `style.css` retains the existing home/error detail. See [team extension points](docs/team-workflow.md#shared-ui-extension-points).
 
 ## Checks
 
@@ -71,7 +80,7 @@ The last two require local MongoDB. Optionally set `TEST_MONGODB_URI=mongodb://1
 - `config/`, `models/`: validated runtime settings, connection, article constants and persistent structures.
 - `routes/`, `middleware/`, `controllers/`: HTTP routing, access/error checks and responses.
 - `services/`, `utils/`: business rules, queries and small reusable helpers.
-- `views/`, `public/`: existing EJS templates and browser assets; feature work follows later.
+- `views/`, `public/`: shared EJS shell, Login page, base CSS and browser scripts; feature work follows later.
 - `scripts/`, `tests/`: account/index utilities and isolated verification.
 - `docs/`: [architecture](docs/architecture.md), [models](docs/data-models.md), [workflow](docs/article-workflow.md), [API](docs/api-contract.md), [team guide](docs/team-workflow.md).
 

@@ -8,11 +8,13 @@ Browser / Postman
   -> Mongoose Model -> MongoDB
   <- explicit DTO <- JSON response
 
-GET / -> indexRoutes -> homeController -> EJS -> HTML
+GET / or /login -> indexRoutes -> loadSession -> homeController -> shared EJS -> HTML
 Errors -> errorHandler -> JSON for /api, EJS for page requests
 ```
 
 The controller translates HTTP inputs/outputs. The service holds reusable business decisions. A Mongoose model defines storage and provides database operations; it does not decide who may approve an article. A DTO is an explicitly chosen response object: public callers never receive raw Article or User documents.
+
+![Public article request flow between project files and the JSON response](assets/architecture-flow.svg)
 
 ## Directory responsibilities
 
@@ -25,7 +27,7 @@ The controller translates HTTP inputs/outputs. The service holds reusable busine
 | `services` | Password/session/User operations and Article visibility/workflow rules |
 | `models` | User, Session and Article schemas/indexes |
 | `utils` | Small validation, cookie, logging, DTO, authorization and pagination helpers |
-| `views`, `public` | Existing page templates and static CSS/JS; no feature UI added |
+| `views`, `public` | Shared EJS shell, Login page, base CSS and login/session/logout browser behavior |
 | `scripts`, `tests` | Local maintenance and repeatable isolated checks |
 | `docs` | Stable API contracts and student/team explanations |
 
@@ -33,7 +35,9 @@ The controller translates HTTP inputs/outputs. The service holds reusable busine
 
 Importing `app.js` only constructs Express; it does not connect or listen. Direct execution validates configuration, connects to MongoDB, then listens. Tests can import the same app and bind a free local port.
 
-After JSON/static/home handling, `/api` requests pass through `loadSession`. The browser sends `daily_web_session` automatically. Only a SHA-256 digest of its random token is stored in a Session record. A valid, unexpired record loads the current User; services check that user's current role and article ownership. MongoDB survives a Node restart, so the cookie continues to work. See [models](data-models.md).
+After JSON/static handling, `/api` requests pass through `loadSession` in `app.js`. The `/` and `/login` page routes also use that same middleware, once per request. The browser sends `daily_web_session` automatically. Only a SHA-256 digest of its random token is stored in a Session record. A valid, unexpired record loads the current User; services check that user's current role and article ownership. MongoDB survives a Node restart, so the cookie continues to work. See [models](data-models.md).
+
+`loadSession` exposes only the safe User DTO as `res.locals.currentUser` for EJS and sets `Cache-Control: no-store`. It never exposes the session token or password hash to templates. An absent cookie needs no DB query; an expired/revoked cookie is cleared. The shared navigation tolerates missing locals on early errors/unknown page routes; `main.js` then checks the existing session API. Static assets and `/health` do not perform session lookups.
 
 ## Article boundaries
 
@@ -45,7 +49,9 @@ Dates, ownership and workflow status cannot be supplied through general content 
 
 ## Frontend integration boundary
 
-Current `/` remains the original EJS skeleton. The future full public article page must render the complete approved body in its initial HTML, using the public query service rather than making an internal HTTP request. Ajax will handle feed interactions/comments/autosave. Escape article text with EJS `<%=` or browser `textContent`; this core does not accept article bodies as trusted HTML.
+Current `/` remains a skeleton, now using the shared header/navigation/footer alongside Login and error pages. `GET /login` renders a form for guests or redirects authenticated users to `/`. `login.js` sends JSON to the existing auth API and returns home on success. `main.js` refreshes the session display and handles Logout. The cookie stays HttpOnly; browser role display is not authorization.
+
+The future full public article page must render the complete approved body in its initial HTML, using the public query service rather than making an internal HTTP request. Ajax will handle feed interactions/comments/autosave. Escape article text with EJS `<%=` or browser `textContent`; this core does not accept article bodies as trusted HTML.
 
 ## Errors and logs
 

@@ -35,6 +35,25 @@ test("invalid JSON and oversized bodies return controlled errors", async () => {
   }
 });
 
+test("shared login shell and assets work for guests without MongoDB", async () => {
+  const page = await fetch(http.baseUrl + "/login");
+  assert.equal(page.status, 200);
+  assert.equal(page.headers.get("cache-control"), "no-store");
+  const html = await page.text();
+  assert.match(html, /id="login-form"/);
+  assert.match(html, /id="login-fields" disabled/);
+  assert.match(html, /autocomplete="current-password"/);
+  assert.match(html, /class="site-footer"/);
+  for (const path of ["/css/base.css", "/js/main.js", "/js/login.js"]) {
+    assert.equal((await fetch(http.baseUrl + path)).status, 200);
+  }
+  const unavailable = await fetch(http.baseUrl + "/login", {
+    headers: { Cookie: "daily_web_session=" + "x".repeat(43) },
+  });
+  assert.equal(unavailable.status, 503);
+  assert.match(await unavailable.text(), /class="site-footer"/);
+});
+
 test("unexpected errors are sanitized", async () => {
   const failing = express();
   failing.use(require("../middleware/requestContext"));

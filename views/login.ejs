@@ -1,0 +1,20 @@
+<%- include("partials/header") %>
+<main id="main-content" class="container">
+  <h1>Login</h1>
+  <p>Sign in with your Reporter or Editor account.</p>
+  <noscript><p class="feedback">Enable JavaScript to use the login form.</p></noscript>
+  <form id="login-form" aria-describedby="login-message">
+    <% // Disabled until login.js loads: credentials must never fall back to a URL query. %>
+    <fieldset id="login-fields" disabled>
+      <legend class="visually-hidden">Account credentials</legend>
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" required maxlength="40" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required maxlength="128" autocomplete="current-password">
+      <button type="submit">Login</button>
+    </fieldset>
+    <p id="login-message" class="feedback" role="status" aria-live="polite"></p>
+  </form>
+</main>
+<script src="/js/login.js" defer></script>
+<%- include("partials/footer") %>

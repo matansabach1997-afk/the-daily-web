@@ -1,8 +1,10 @@
 const express = require("express");
-const { showHome } = require("../controllers/homeController");
+const { showHome, showLogin } = require("../controllers/homeController");
+const loadSession = require("../middleware/loadSession");
 
 const router = express.Router();
 
-router.get("/", showHome);
+router.get("/", loadSession, showHome);
+router.get("/login", loadSession, showLogin);
 
 module.exports = router;

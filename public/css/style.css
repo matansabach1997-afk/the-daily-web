@@ -1,32 +1,8 @@
-:root {
-  color-scheme: light;
-  font-family: system-ui, sans-serif;
-  color: #1f2937;
-  background: #f8fafc;
-}
-
-body {
-  margin: 0;
-}
-
-.container {
-  width: min(680px, calc(100% - 2rem));
-  margin: 12vh auto;
-  padding: 2rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  background: #ffffff;
-  box-shadow: 0 12px 32px rgb(15 23 42 / 8%);
-}
-
+/* Existing home/error detail; shared layout and form styles live in base.css. */
 .eyebrow {
   color: #2563eb;
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-a {
-  color: #1d4ed8;
 }

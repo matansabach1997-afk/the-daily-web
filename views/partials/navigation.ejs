@@ -1,0 +1,11 @@
+<% const navUser = typeof currentUser === "undefined" ? null : currentUser; %>
+<nav class="navigation" aria-label="Main navigation">
+  <a href="/">Home</a>
+  <% // Add role-specific links here only when real page routes exist. %>
+  <a id="login-link" href="/login"<% if (navUser) { %> hidden<% } %>>Login</a>
+  <div id="account-controls" class="account-controls"<% if (!navUser) { %> hidden<% } %>>
+    <span id="current-user"><%= navUser ? `${navUser.username} (${navUser.role})` : "" %></span>
+    <button id="logout-button" type="button" hidden>Logout</button>
+    <noscript>Enable JavaScript to log out.</noscript>
+  </div>
+</nav>
