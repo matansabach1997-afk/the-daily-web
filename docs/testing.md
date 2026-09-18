@@ -27,11 +27,39 @@ An official portable MongoDB ZIP is acceptable local test infrastructure: extrac
 | `articles.test.js` | HTTP create/save/submit/return/resubmit/approve/revision/delete, ownership/roles, invalid transitions, tampering, first-publication preservation and public snapshot isolation |
 | `publicArticles.test.js` | Real 45-document fixture, 20/20/5 pagination, equal-date tie-break, public visibility across all states, no private leakage, invalid queries/IDs, public index and explain |
 | `coreIntegration.test.js` | Existing auth/User CRUD, uniqueness, session digest/expiry/logout/password revocation, removed User, repeatable index setup and real Node process restart with the same cookie |
+| `ui.test.js` | Shared home/login/404 shell, Reporter/Editor session-aware HTML, authenticated login redirect, logout/revoked cookie, unchanged bad-login API contract |
 | `scripts/smoke-test.js` | Original six HTTP status/content-type checks against an isolated DB, no in-memory Article fallback |
 
-Test fixtures are deliberately small and temporary; they are not the team's 500-article seed. The index explain check proves the declared index supports the public sort; it is not a thousands-of-readers load benchmark. Simultaneous editing, external image availability, feature UI behavior and other deferred features are not claimed as tested.
+`runtime.test.js` also checks the guest Login page/assets without MongoDB and a controlled EJS 503 when a session lookup needs an unavailable database.
+
+Test fixtures are deliberately small and temporary; they are not the team's 500-article seed. The index explain check proves the declared index supports the public sort; it is not a thousands-of-readers load benchmark. Simultaneous editing, external image availability and deferred feature UI behavior are not claimed as tested.
+
+## Shared UI browser checks
+
+Use local test accounts, never real credentials in screenshots or logs. The Node HTTP tests check server responses; they do not execute browser JavaScript. Verify these separately in a browser:
+
+1. Open `/login` as a guest. Empty fields use native form validation; an incorrect password shows `Invalid username or password.` without navigating away, and the password input is cleared.
+2. Login as Reporter, then as Editor after logging out. Each successful login redirects home and shows the correct username/role; refresh retains the session. An authenticated `/login` request redirects home.
+3. Click Logout. Home shows Login again, and private API requests no longer authenticate with that session. A failed network request must show feedback rather than claiming success.
+4. Visit an unknown page and return home: the shared shell remains available. Test narrow phone, tablet and desktop widths for wrapping and accessible controls.
+5. Disable JavaScript using browser tools for a manual check: login fields remain disabled and the enable-JavaScript message appears. No normal form submission should expose a password in the URL. Re-enable JavaScript after the check.
 
 `npm run db:indexes` creates current model indexes on the configured database without dropping existing indexes. Verify this utility only with a deliberately selected local database. See [manual verification](manual-verification.md) for a student-friendly API demonstration.
+
+## Verified shared UI run — 2026-09-17
+
+Windows, Node.js 24.20.0, official portable MongoDB 8.0.26 on loopback port 27018 with a dedicated temporary data folder. The downloaded ZIP matched the official SHA-256 checksum; no dependencies or Windows service were installed.
+
+- `npm.cmd run check:syntax`: PASS, 51 JavaScript files.
+- `npm.cmd run test:unit`: PASS, 12 tests.
+- `npm.cmd test`: PASS, 29 tests, zero failures/skips; includes existing authentication/session restart, User, Article workflow and public API coverage.
+- `npm.cmd run test:smoke`: PASS, all six existing checks.
+- Real browser with isolated fixture accounts: invalid credentials/message/password clearing, required/blank username feedback, Reporter and Editor login, authenticated `/login` redirect, session after refresh, Logout and session-aware 404 navigation passed.
+- Login and shared navigation checked at 360, 768 and 1280 CSS-pixel widths without horizontal overflow. This is a shared-shell check, not testing future feature layouts.
+- After stopping the temporary HTTP server, the loaded Login page displayed the friendly connection-error message rather than navigating or claiming success.
+- The initial UI test assumed cookie clearing used `Max-Age=0`; it was corrected to assert the existing expired-cookie contract. No auth backend change was needed.
+- No Git operations. A before/after SHA-256 file inventory checked the scope; models, auth services/controllers/routes, article APIs, package files and the existing architecture SVG were unchanged.
+- All isolated test databases were removed and both temporary servers stopped. The execution policy blocked filesystem deletion of the downloaded temporary MongoDB folder even after a scoped permission grant; those files remain outside the repository, not as an installed service.
 
 ## Verified Lead Core run — 2026-09-09
 

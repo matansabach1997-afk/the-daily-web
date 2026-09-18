@@ -77,4 +77,13 @@ See [workflow](article-workflow.md) for lengths, validation and all transitions.
 
 ## Existing page endpoints
 
-`GET /` renders the existing `views/index.ejs` skeleton. `GET /health` returns `{status:"ok"}`. `GET /css/style.css` and `/js/main.js` serve existing assets. Unknown page URLs render 404 EJS; unknown API URLs return the shared JSON error. Full public article pages and login/workspace UIs are future team features.
+| Method/path | Behavior |
+| --- | --- |
+| GET `/` | 200 HTML skeleton using shared navigation; current session loaded |
+| GET `/login` | 200 HTML login form for guests; 302 to `/` for authenticated users |
+| GET `/health` | Existing `{status:"ok"}` HTTP liveness check |
+| GET `/css/base.css`, `/css/style.css`, `/js/main.js`, `/js/login.js` | Static shared/page assets |
+
+Home and Login use `Cache-Control: no-store`; a session-cookie lookup requiring an unavailable DB returns the existing 503 EJS error page. Unknown page URLs still render 404 EJS; unknown API URLs still return the shared JSON error.
+
+Login uses the existing POST auth route; Logout uses the existing DELETE session route. Both require browser JavaScript and redirect home on success. Navigation refreshes through the existing GET session API. No new authentication endpoints, API response changes, role redirects or placeholder workspace pages were added. Full public article and workspace pages remain team features.
