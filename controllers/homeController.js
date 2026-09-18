@@ -5,4 +5,9 @@ function showHome(req, res) {
   });
 }
 
-module.exports = { showHome };
+function showLogin(req, res) {
+  if (req.user) return res.redirect("/");
+  res.render("login", { title: "Login | The Daily Web" });
+}
+
+module.exports = { showHome, showLogin };
