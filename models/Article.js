@@ -85,5 +85,10 @@ articleSchema.index({ updatedAt: -1, _id: -1 });
 articleSchema.index({ publishedAt: -1, _id: -1 }, {
   partialFilterExpression: { publishedAt: { $type: "date" } },
 });
+articleSchema.index({ "publishedContent.category": 1, publishedAt: -1, _id: -1 }, {
+  partialFilterExpression: { publishedAt: { $type: "date" } },
+});
+// Search approved titles only. No stemming/stop words, including for Hebrew text.
+articleSchema.index({ "publishedContent.title": "text" }, { default_language: "none" });
 
 module.exports = mongoose.model("Article", articleSchema);

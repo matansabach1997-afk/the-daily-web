@@ -9,6 +9,9 @@ Browser / Postman
   <- explicit DTO <- JSON response
 
 GET / or /login -> indexRoutes -> loadSession -> homeController -> shared EJS -> HTML
+GET /articles/:id -> indexRoutes -> loadSession -> requireDatabase -> homeController.showArticle
+  -> articleQueryService.getPublic -> Article -> MongoDB -> public DTO -> article.ejs (complete body)
+Home feed.js -> GET /api/articles?q=&category=&sort=&cursor= -> existing Article route/controller/query -> JSON cards
 GET /reporter/* -> reporterPageRoutes -> loadSession -> requireRole(reporter) -> reporterPageController -> EJS scaffold
 GET /editor/* -> editorPageRoutes -> loadSession -> requireRole(editor) -> editorPageController -> EJS scaffold
 Errors -> errorHandler -> JSON for /api, EJS for page requests
@@ -51,9 +54,13 @@ Dates, ownership and workflow status cannot be supplied through general content 
 
 ## Frontend integration boundary
 
-Current `/` remains a skeleton, now using the shared header/navigation/footer alongside Login and error pages. `GET /login` renders a form for guests or redirects authenticated users to `/`. `login.js` sends JSON to the existing auth API and returns home on success. `main.js` refreshes the session display and handles Logout. The cookie stays HttpOnly; browser role display is not authorization.
+`/` renders the news-feed controls and shared header/navigation/footer. `feed.js` loads the first 20 public cards through the existing API. Search is debounced 300 ms; category/date sorting reset the cursor and results. An AbortController plus a request sequence number ignores stale responses (this is client request bookkeeping, not Article revision concurrency). Only one pagination request runs at a time. IntersectionObserver requests the next batch near the bottom; an explicit Load more button also works without it. IDs are deduplicated; errors preserve loaded cards and offer a manual retry of the same page, without an automatic retry loop. Empty/loading/end states are announced. All text uses textContent, never raw HTML.
 
-The future full public article page must render the complete approved body in its initial HTML, using the public query service rather than making an internal HTTP request. Ajax will handle feed interactions/comments/autosave. Escape article text with EJS `<%=` or browser `textContent`; this core does not accept article bodies as trusted HTML.
+`GET /login` still renders a form for guests or redirects authenticated users to `/`. `login.js` sends JSON to the existing auth API and returns home on success. `main.js` refreshes the session display and handles Logout. The cookie stays HttpOnly; browser role display is not authorization.
+
+`GET /articles/:id` renders the complete approved body in its initial HTML using `articleQueryService.getPublic`, with no internal HTTP request. `article.ejs` uses escaped EJS `<%=` and preserves plain-text line breaks through CSS. Title, category, first publication date, reporter, summary and main image accompany the body. It remains readable without JavaScript. No empty article.js is created. Private content never reaches these templates. Comments, view counting, viewed state, popularity, analytics and Weather UI remain unimplemented.
+
+Public CSS is page-scoped and uses a wrapping Flexbox card layout: one column at 360px, two at 768px, three at 1280px. Shared layout and teammate styles are unchanged. The homepage itself can render without a database for guests; its Ajax request then shows the existing API error. Article pages require MongoDB and use the shared EJS error handler.
 
 ## Isolated team integration points
 

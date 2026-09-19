@@ -1,8 +1,37 @@
 <%- include("partials/header") %>
-    <main id="main-content" class="container">
-      <p class="eyebrow">Node · Express · EJS</p>
-      <h1><%= title %></h1>
-      <p><%= message %></p>
-      <p><a href="/api/articles">View the public articles API</a></p>
+    <main id="main-content" class="shell public-feed">
+      <p class="eyebrow">The Daily Web</p>
+      <h1>Latest news</h1>
+      <p>Discover the stories that matter to you.</p>
+      <form id="feed-filters" class="feed-filters" role="search">
+        <div class="feed-search">
+          <label for="feed-search">Search article titles</label>
+          <input id="feed-search" name="q" type="search" maxlength="100" placeholder="Search by word or phrase" aria-describedby="search-help">
+          <small id="search-help">Whole words; use quotes for an exact phrase.</small>
+        </div>
+        <div>
+          <label for="feed-category">Category</label>
+          <select id="feed-category" name="category">
+            <option value="">All categories</option>
+            <% for (const category of categories) { %>
+              <option value="<%= category %>"><%= category[0].toUpperCase() + category.slice(1) %></option>
+            <% } %>
+          </select>
+        </div>
+        <div>
+          <label for="feed-sort">Publication date</label>
+          <select id="feed-sort" name="sort">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
+        </div>
+        <button type="submit">Search</button>
+      </form>
+      <noscript><p>Enable JavaScript to search and load the news feed. Individual article pages can be read without JavaScript.</p></noscript>
+      <section id="feed-results" class="feed-results" aria-label="Articles" aria-busy="false"></section>
+      <p id="feed-status" role="status" aria-live="polite">Loading articles...</p>
+      <button id="feed-more" type="button" hidden>Load more</button>
+      <div id="feed-sentinel" aria-hidden="true"></div>
     </main>
+    <script src="/js/feed.js" defer></script>
 <%- include("partials/footer") %>

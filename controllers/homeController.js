@@ -1,7 +1,12 @@
+const query = require("../services/articleQueryService");
+const { categories } = require("../config/articleRules");
+const { allowedFields } = require("../utils/validation");
+
 function showHome(req, res) {
   res.render("index", {
     title: "The Daily Web",
-    message: "MVC skeleton is ready.",
+    categories,
+    pageStylesheet: "/css/feed.css",
   });
 }
 
@@ -10,4 +15,14 @@ function showLogin(req, res) {
   res.render("login", { title: "Login | The Daily Web" });
 }
 
-module.exports = { showHome, showLogin };
+async function showArticle(req, res) {
+  allowedFields(req.query, [], "query");
+  const article = await query.getPublic(req.params.id);
+  res.render("article", {
+    title: `${article.title} | The Daily Web`,
+    article,
+    pageStylesheet: "/css/article.css",
+  });
+}
+
+module.exports = { showHome, showLogin, showArticle };

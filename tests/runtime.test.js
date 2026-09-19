@@ -82,6 +82,9 @@ test("database-backed APIs return 503 when no database is connected", async () =
   }
   const response = await fetch(http.baseUrl + "/api/auth/session", { headers: { Cookie: "daily_web_session=" + "x".repeat(43) } });
   assert.equal(response.status, 503);
+  const articlePage = await fetch(http.baseUrl + "/articles/000000000000000000000001");
+  assert.equal(articlePage.status, 503);
+  assert.match(articlePage.headers.get("content-type"), /text\/html/);
   assert.equal((await fetch(http.baseUrl + "/health")).status, 200);
 });
 

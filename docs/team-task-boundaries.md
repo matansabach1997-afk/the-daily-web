@@ -111,9 +111,9 @@ The common header accepts an optional, server-chosen `pageStylesheet`; A/B contr
 
 ## Central integration — not assigned to A/B/C/D
 
-- Public news feed final integration, search/filter/infinite-scroll UI and query extensions.
-- Public article EJS page and complete approved content in its initial HTML.
-- Comments UI integration into the future `article.ejs` (that file does not exist yet).
+- Public news feed, search/category/date-sort/infinite-scroll UI and query extensions are now implemented centrally; changes remain centrally owned.
+- Public `views/article.ejs` and complete approved content in initial HTML are now implemented centrally.
+- Comments UI integration into the existing `article.ejs` remains future central work.
 - BrowserIdentity, Guest comment limiting/identity, ReadReceipt and viewed/unviewed.
 - ViewStat, per-visit counting, popularity and analytics integration.
 - Weather widget/sidebar; full defense seed combining article/comment/statistics data.
