@@ -1,6 +1,7 @@
 const Article = require("../models/Article");
+const ViewStat = require("../models/ViewStat");
 const { statuses, categories } = require("../config/articleRules");
-const { id, allowedFields, text } = require("../utils/validation");
+const { id, allowedFields, text, browserId } = require("../utils/validation");
 const requireActor = require("../utils/authorization");
 const httpError = require("../utils/httpError");
 const { PAGE_SIZE, cursorFilter, page } = require("../utils/pagination");
@@ -63,7 +64,7 @@ function publicArticleDto(article, includeBody = false) {
 }
 
 async function listPublic(query) {
-  allowedFields(query, ["cursor", "q", "category", "sort"], "query");
+  allowedFields(query, ["cursor", "q", "category", "sort", "viewed", "browserId"], "query");
   const filter = publicFilter();
   const search = query.q === undefined ? "" : text(query.q, "q", { max: 100 });
   if (search) filter.$text = { $search: search };
@@ -72,7 +73,14 @@ async function listPublic(query) {
     filter["publishedContent.category"] = query.category;
   }
   const sort = query.sort === undefined ? "newest" : query.sort;
-  if (!["newest", "oldest"].includes(sort)) throw httpError(400, "INVALID_SORT", "Use newest or oldest sorting.");
+  if (!["newest", "oldest", "popularity"].includes(sort)) throw httpError(400, "INVALID_SORT", "Use newest, oldest or popularity sorting.");
+  if (query.viewed !== undefined && !["true", "false"].includes(query.viewed)) {
+    throw httpError(400, "INVALID_VIEWED", "Use viewed=true or viewed=false.");
+  }
+  const identity = query.browserId === undefined && query.viewed === undefined ? undefined : browserId(query.browserId);
+  if (sort === "popularity" || query.viewed !== undefined) {
+    return listPublicWithStats(filter, query, sort, identity);
+  }
   const direction = sort === "oldest" ? 1 : -1;
   const rows = await Article.find({ $and: [filter, cursorFilter(query.cursor, "publishedAt", direction)] })
     .select("_id publishedContent.title publishedContent.summary publishedContent.imageUrl publishedContent.category reporter publishedAt")
@@ -80,6 +88,55 @@ async function listPublic(query) {
     .populate("reporter", "_id username").lean();
   const result = page(rows, "publishedAt");
   result.data = result.data.map((article) => publicArticleDto(article));
+  return result;
+}
+
+async function listPublicWithStats(filter, query, sort, identity) {
+  const popular = sort === "popularity";
+  const field = popular ? "totalViews" : "publishedAt";
+  const direction = sort === "oldest" ? 1 : -1;
+  const afterCursor = cursorFilter(query.cursor, field, direction, popular ? "number" : "date");
+  const pipeline = [
+    { $match: filter }, // Must be first for indexed title $text search.
+    { $project: {
+      "publishedContent.title": 1, "publishedContent.summary": 1,
+      "publishedContent.imageUrl": 1, "publishedContent.category": 1, reporter: 1, publishedAt: 1,
+    } },
+  ];
+  if (!popular) {
+    // Preserve index-friendly date ordering before the viewed existence lookup.
+    pipeline.splice(1, 0, { $match: afterCursor }, { $sort: { publishedAt: direction, _id: direction } });
+  }
+  if (query.viewed !== undefined) {
+    pipeline.push(
+      { $lookup: {
+        from: ViewStat.collection.name, localField: "_id", foreignField: "article",
+        pipeline: [{ $match: { browserId: identity } }, { $limit: 1 }, { $project: { _id: 1 } }],
+        as: "seen",
+      } },
+      { $match: { "seen.0": { $exists: query.viewed === "true" } } },
+      { $unset: "seen" },
+    );
+  }
+  if (popular) {
+    pipeline.push(
+      { $lookup: {
+        from: ViewStat.collection.name, localField: "_id", foreignField: "article",
+        pipeline: [{ $group: { _id: null, views: { $sum: "$views" } } }], as: "totals",
+      } },
+      { $set: { totalViews: { $ifNull: [{ $arrayElemAt: ["$totals.views", 0] }, 0] } } },
+      { $unset: "totals" },
+      { $match: afterCursor },
+      { $sort: { totalViews: -1, _id: -1 } },
+    );
+  }
+  pipeline.push({ $limit: PAGE_SIZE + 1 });
+  const rows = await Article.aggregate(pipeline).option({ maxTimeMS: 5000 });
+  await Article.populate(rows, { path: "reporter", select: "_id username" });
+  const result = page(rows, field);
+  result.data = result.data.map((article) => ({
+    ...publicArticleDto(article), ...(popular ? { totalViews: article.totalViews } : {}),
+  }));
   return result;
 }
 

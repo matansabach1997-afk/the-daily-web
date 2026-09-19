@@ -10,7 +10,9 @@ function cursorFilter(encoded, field, direction = -1, type = "date") {
     const cursor = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
     allowedFields(cursor, ["value", "id"]);
     id(cursor.id);
-    if (typeof cursor.value !== "string" || cursor.value.length > 100) throw new Error();
+    if (type === "number") {
+      if (!Number.isSafeInteger(cursor.value) || cursor.value < 0) throw new Error();
+    } else if (typeof cursor.value !== "string" || cursor.value.length > 100) throw new Error();
     const value = type === "date" ? new Date(cursor.value) : cursor.value;
     if (type === "date" && (!Number.isFinite(value.getTime()) || value.toISOString() !== cursor.value)) throw new Error();
     const comparison = direction === -1 ? "$lt" : "$gt";

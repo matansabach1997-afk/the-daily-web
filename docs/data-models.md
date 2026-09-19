@@ -51,10 +51,12 @@ Cookie: `daily_web_session`, HttpOnly, SameSite=Lax, Path=/, seven-day max age; 
 
 ## ViewStat and BrowserIdentity
 
-ViewStat stores `article` (Article reference), `browserId` (lowercase UUID v4), `bucketStart` (UTC hour), `views` (positive integer), `lastViewedAt` and timestamps. Atomic increments merge repeat visits within an hour. Unique `(article,browserId,bucketStart)` prevents duplicate buckets; `(article,bucketStart)` and `(browserId,article)` support future time/browser queries. Article semantics are unchanged. Run the index setup script before tracking traffic; ViewStat uses explicit collection/index initialization.
+ViewStat stores `article` (Article reference), `browserId` (lowercase UUID v4), `bucketStart` (UTC hour), `views` (positive integer), `lastViewedAt` and timestamps. Atomic increments merge repeat visits within an hour. Unique `(article,browserId,bucketStart)` prevents duplicate buckets and supports existence checks; `(article,bucketStart)` supports article totals/time queries and `(browserId,article)` supports browser/article checks. Article semantics are unchanged. Run the index setup script before tracking traffic; ViewStat uses explicit collection/index initialization.
+
+Popularity is the lifetime sum of views, computed on reads, never duplicated in Article. Viewed means any bucket exists for the article/browser. Editor analytics groups these records by UTC hour and reads exact publicationHistory markers. These reads reuse the existing indexes; this layer changes no schema or setup-indexes script. See [analytics](analytics.md) for bounds, query costs and browser-vs-account semantics.
 
 BrowserIdentity is a helper storing a random UUID in localStorage, not a MongoDB collection or trusted server identity. Read [view tracking](view-tracking.md) for lifecycle, growth, deletion boundaries and future work.
 
 ## Later collections
 
-Comment, a server-side BrowserIdentity collection and ReadReceipt remain deferred. No RateLimit collection, transactions or replica-set deployment. Public search/category and ViewStat indexes are declared; popularity/read-state features remain deferred. `npm run db:indexes` creates declared indexes; it does not drop unknown existing ones or migrate data.
+Comment, a server-side BrowserIdentity collection and ReadReceipt remain deferred. No RateLimit collection, transactions or replica-set deployment. Public search/category and ViewStat indexes are declared; popularity/viewed filtering and analytics backend now use them, while their final UI remains deferred. `npm run db:indexes` creates declared indexes; it does not drop unknown existing ones or migrate data.

@@ -1,4 +1,4 @@
-const { recordView } = require("../services/viewStatService");
+const { recordView, getAnalytics } = require("../services/viewStatService");
 const { allowedFields } = require("../utils/validation");
 
 async function record(req, res) {
@@ -7,4 +7,8 @@ async function record(req, res) {
   res.status(204).end();
 }
 
-module.exports = { record };
+async function analytics(req, res) {
+  res.json({ data: await getAnalytics(req.user, req.params.id, req.query) });
+}
+
+module.exports = { record, analytics };

@@ -1,6 +1,9 @@
 const ViewStat = require("../models/ViewStat");
+const Article = require("../models/Article");
+const mongoose = require("mongoose");
+const requireActor = require("../utils/authorization");
 const { requirePublicArticle } = require("./articleQueryService");
-const { allowedFields, id } = require("../utils/validation");
+const { allowedFields, id, browserId } = require("../utils/validation");
 const httpError = require("../utils/httpError");
 
 function hourStart(now) {
@@ -10,12 +13,10 @@ function hourStart(now) {
 async function recordView(input) {
   allowedFields(input, ["articleId", "browserId"]);
   const articleId = id(input.articleId);
-  if (typeof input.browserId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.browserId)) {
-    throw httpError(400, "INVALID_BROWSER_ID", "A valid anonymous browser UUID is required.");
-  }
+  const identity = browserId(input.browserId);
   await requirePublicArticle(articleId);
   const now = new Date();
-  const filter = { article: articleId, browserId: input.browserId.toLowerCase(), bucketStart: hourStart(now) };
+  const filter = { article: articleId, browserId: identity, bucketStart: hourStart(now) };
   const update = { $inc: { views: 1 }, $max: { lastViewedAt: now } };
   try {
     await ViewStat.updateOne(filter, update, { upsert: true, runValidators: true }).maxTimeMS(5000);
@@ -28,4 +29,54 @@ async function recordView(input) {
   }
 }
 
-module.exports = { recordView, hourStart };
+function analyticsPeriod(query) {
+  allowedFields(query, ["from", "to"], "query");
+  function boundary(value) {
+    const date = typeof value === "string" ? new Date(value) : new Date(NaN);
+    if (!Number.isFinite(date.getTime()) || date.toISOString() !== value || date.getTime() % 3600000 !== 0) {
+      throw httpError(400, "INVALID_PERIOD", "Use UTC ISO timestamps on hour boundaries, including milliseconds.");
+    }
+    return date;
+  }
+  const to = query.to === undefined ? new Date(hourStart(new Date()).getTime() + 3600000) : boundary(query.to);
+  const from = query.from === undefined ? new Date(to.getTime() - 30 * 86400000) : boundary(query.from);
+  if (!Number.isFinite(from.getTime()) || from >= to || to - from > 90 * 86400000) {
+    throw httpError(400, "INVALID_PERIOD", "The analytics period must be positive and at most 90 days.");
+  }
+  return { from, to };
+}
+
+async function getAnalytics(actor, articleId, query) {
+  requireActor(actor, ["editor"]);
+  const key = new mongoose.Types.ObjectId(id(articleId));
+  const { from, to } = analyticsPeriod(query);
+  // Editor may inspect any existing article, but no editable content is returned.
+  const article = await Article.findById(key).select("_id publishedAt publicationHistory").lean();
+  if (!article) throw httpError(404, "ARTICLE_NOT_FOUND", "Article not found.");
+  const [result] = await ViewStat.aggregate([
+    { $match: { article: key } },
+    { $facet: {
+      total: [{ $group: { _id: null, views: { $sum: "$views" } } }],
+      series: [
+        { $match: { bucketStart: { $gte: from, $lt: to } } },
+        { $group: { _id: "$bucketStart", views: { $sum: "$views" } } },
+        { $sort: { _id: 1 } },
+        { $project: { _id: 0, bucketStart: "$_id", views: 1 } },
+      ],
+    } },
+  ]).option({ maxTimeMS: 5000 });
+  const series = result.series;
+  return {
+    articleId: article._id,
+    publishedAt: article.publishedAt,
+    totalViews: result.total[0]?.views || 0,
+    period: { from, to, interval: "hour" },
+    periodViews: series.reduce((sum, point) => sum + point.views, 0),
+    series,
+    publicationMarkers: article.publicationHistory
+      .map((at, index) => ({ at, type: index === 0 ? "publication" : "update" }))
+      .filter((marker) => marker.at >= from && marker.at < to),
+  };
+}
+
+module.exports = { recordView, hourStart, getAnalytics };
