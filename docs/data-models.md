@@ -36,6 +36,8 @@ Indexes (the `_id` index is automatic):
 | status, updatedAt descending, _id descending | Editor status queue |
 | updatedAt descending, _id descending | Editor all-article workspace |
 | publishedAt descending, _id descending; partial publishedAt is Date | Public 20-item feed, stable first-publication ordering |
+| publishedContent.category, publishedAt descending, _id descending; partial publishedAt is Date | Public category filter and date ordering (reverse scan for oldest) |
+| publishedContent.title text; default_language none | Whole-word approved-title search, no stemming or stop-word removal; never indexes workingContent |
 
 ## Session
 
@@ -49,4 +51,4 @@ Cookie: `daily_web_session`, HttpOnly, SameSite=Lax, Path=/, seven-day max age; 
 
 ## Later team-owned collections
 
-Comment, ViewStat, BrowserIdentity and ReadReceipt remain deferred, not pre-created. They will complete the approved seven-collection design. No RateLimit collection, transactions or replica-set deployment. Search/category/popularity/read-state indexes belong to those later query additions, not this basic public contract. `npm run db:indexes` creates declared indexes; it does not drop unknown existing ones or migrate data.
+Comment, ViewStat, BrowserIdentity and ReadReceipt remain deferred, not pre-created. They will complete the approved seven-collection design. No RateLimit collection, transactions or replica-set deployment. Public search/category indexes are now declared above; popularity/read-state indexes remain deferred. `npm run db:indexes` creates declared indexes; it does not drop unknown existing ones or migrate data.

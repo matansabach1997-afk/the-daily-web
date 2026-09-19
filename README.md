@@ -1,6 +1,6 @@
 # The Daily Web
 
-University news project using Node.js, Express, MongoDB/Mongoose, EJS and Vanilla JavaScript. The shared Lead Core is implemented; feature UIs are deliberately left for the team. Read [AGENTS.md](AGENTS.md) before making changes.
+University news project using Node.js, Express, MongoDB/Mongoose, EJS and Vanilla JavaScript. The shared Lead Core and central public news experience are implemented; Reporter/Editor features remain assigned to the team. Read [AGENTS.md](AGENTS.md) before making changes.
 
 ## Local setup
 
@@ -46,7 +46,9 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 - Persistent MongoDB sessions with opaque HttpOnly cookies, salted scrypt passwords and server-side role/ownership checks.
 - Protected User CRUD and private article workspace list/detail APIs.
 - Draft creation, working-content save, submission, return, approval, Start Revision and hard deletion.
-- Safe MongoDB-backed public list/detail APIs with batches of 20 and cursor pagination.
+- Safe MongoDB-backed public list/detail APIs, approved-title text search, category filtering, newest/oldest sorting and 20-card cursor pagination.
+- Public feed with debounced search, infinite scroll, retry/load-more fallback and page-scoped responsive CSS.
+- Public `/articles/:id` EJS page with the complete approved article in its initial HTML, readable without JavaScript.
 - Shared validation, controlled API errors, request IDs and sanitized operational logs.
 - Shared EJS header/navigation/footer, base styling and browser Login/Logout using the existing auth APIs.
 - Role-protected Reporter/Editor page scaffolds and empty, pre-mounted Comments/Weather API routers; see [A/B/C/D ownership](docs/team-task-boundaries.md).
@@ -54,7 +56,13 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 
 `publishedAt` always means **first publication**. Each approval appends its timestamp to `publicationHistory`. A pending/returned/draft revision never hides or replaces the previous public content.
 
-Not implemented here: Reporter/autosave UI, public feed/search/filter/infinite-scroll UI, full article EJS/SEO page, viewed state, Editor UI, Comments, BrowserIdentity, ReadReceipt, ViewStat/analytics/popularity, Weather, large seed or responsive feature layouts. Home remains a skeleton inside the shared responsive shell, not a news feed.
+Not implemented here: Reporter/autosave UI, viewed state, Editor UI, Comments/UI, BrowserIdentity, ReadReceipt, ViewStat/analytics/popularity, Weather/UI or large seed. No page-view counting is added yet.
+
+### Public news experience
+
+After updating, rerun `npm.cmd run db:indexes` to add the approved-title text and public category/date indexes. No dependency change or data migration is required. The homepage loads up to 20 approved articles at a time. Search matches whole words in approved titles (quotes for phrases), not partial words; category and publication-date sorting run on the server. Later approved updates do not move the original publication date. See the [exact query contract](docs/api-contract.md#public-feed-query-contract).
+
+The feed needs JavaScript; full article pages do not. Existing approved content remains visible while its working revision is draft/pending/returned. Comments, weather, popularity and viewed-state controls are intentionally absent. For focused checks run `node --test tests/publicArticles.test.js tests/publicNews.test.js tests/feedClient.test.js`. See [public news verification](docs/public-news.md) for browser checks and boundaries.
 
 ## Shared UI foundation
 
@@ -81,7 +89,7 @@ The last two require local MongoDB. Optionally set `TEST_MONGODB_URI=mongodb://1
 - `config/`, `models/`: validated runtime settings, connection, article constants and persistent structures.
 - `routes/`, `middleware/`, `controllers/`: HTTP routing, access/error checks and responses.
 - `services/`, `utils/`: business rules, queries and small reusable helpers.
-- `views/`, `public/`: shared EJS shell, Login page, base CSS and browser scripts; feature work follows later.
+- `views/`, `public/`: shared EJS shell, Login, public feed and server-rendered articles; isolated Reporter/Editor scaffolds.
 - `scripts/`, `tests/`: account/index utilities and isolated verification.
 - `docs/`: [architecture](docs/architecture.md), [models](docs/data-models.md), [workflow](docs/article-workflow.md), [API](docs/api-contract.md), [team guide](docs/team-workflow.md).
 

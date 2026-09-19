@@ -45,7 +45,7 @@ The private namespace is the only source for workingContent, status, note and hi
 
 | Method/path | Caller | Body/query | Success | Main errors |
 | --- | --- | --- | --- | --- |
-| GET `/api/articles` | Anyone | optional `cursor` only | 200 PublicCard list, first publishedAt descending | 400 unsupported query/cursor |
+| GET `/api/articles` | Anyone | optional `cursor`, `q`, `category`, `sort=newest\|oldest` | 200 PublicCard list, first publishedAt order; default newest | 400 unsupported query/cursor/category/sort, 422 search length |
 | GET `/api/articles/:id` | Anyone | None | 200 Item PublicDetail | 400 ID, 404 absent/unpublished |
 | POST `/api/articles` | Reporter | `{workingContent:{...}}`; fields may be omitted on creation | 201 Item PrivateArticle, draft | 400, 403, 422 |
 | PATCH `/api/articles/:id/working-content` | Owner Reporter draft/returned; Editor draft/pending/returned | `{workingContent:Content}`; all five keys, empty strings allowed | 200 Item PrivateArticle | 400 shape, 404 ownership, 409 state, 422 content |
@@ -73,13 +73,26 @@ Example save body:
 }
 ```
 
-See [workflow](article-workflow.md) for lengths, validation and all transitions. No search/category/popularity/viewed parameters, comments, analytics or weather endpoints are silently implemented here. Feature owners must agree additive contracts and indexes before exposing those operations; do not create duplicate Article routes/controllers/services.
+See [workflow](article-workflow.md) for lengths, validation and all transitions. Public search/filter/sort is specified below. Popularity/viewed parameters, comments, analytics and weather endpoints remain outside this implementation. Do not create duplicate Article routes/controllers/services.
+
+### Public feed query contract
+
+- `q`: optional string, trimmed, maximum 100 characters; blank means no search. MongoDB text search of **publishedContent.title only**, not summary/body/workingContent. Case-insensitive whole words; multiple words match any term; quoted phrases and minus-term exclusion follow MongoDB `$text` syntax. This is not substring/autocomplete search. The index uses `default_language: none` (no stemming or stop-word removal).
+- `category`: omit for all, otherwise exactly one of `technology`, `science`, `culture`, `sport`, `local`, checked against the approved category only.
+- `sort`: `newest` (default) or `oldest`. Orders by first `publishedAt`, then `_id` in the same direction. Later approval history does not change that date.
+- `cursor`: existing opaque pagination token. Keep q/category/sort unchanged when using it; reset it when any control changes. Tokens are not signed query snapshots. Each response contains up to 20 cards, plus the unchanged `meta.nextCursor/hasMore` contract. No total-count query or browser-side full-collection filtering.
+- Unsupported/repeated filter values return controlled errors. Pagination under concurrent publication/deletion is not a snapshot; the browser deduplicates IDs.
+
+Example: `GET /api/articles?q=telescope&category=science&sort=oldest`.
+
+Run the existing `npm.cmd run db:indexes` after updating: the Article model adds an approved-title text index and a category/date/ID index. The existing script creates indexes without dropping others. Text matching uses its index, then MongoDB sorts matching results by date; the text index does not itself provide date ordering. See [MongoDB text search](https://www.mongodb.com/docs/manual/reference/operator/query/text/) and [text-index sort limitations](https://www.mongodb.com/docs/manual/core/indexes/index-types/index-text/text-index-restrictions/).
 
 ## Existing page endpoints
 
 | Method/path | Behavior |
 | --- | --- |
-| GET `/` | 200 HTML skeleton using shared navigation; current session loaded |
+| GET `/` | 200 public news feed shell with filters; browser requests first 20 cards from the public API |
+| GET `/articles/:id` | 200 EJS with complete approved article in initial HTML; 404 absent/unpublished, 400 invalid ID/query, 503 DB unavailable |
 | GET `/login` | 200 HTML login form for guests; 302 to `/` for authenticated users |
 | GET `/reporter` | 200 Reporter Workspace scaffold; Reporter only |
 | GET `/reporter/edit/:id` | 200 Reporter edit scaffold; Reporter only; validates ID format, no article read/write yet |
@@ -88,7 +101,9 @@ See [workflow](article-workflow.md) for lengths, validation and all transitions.
 | GET `/health` | Existing `{status:"ok"}` HTTP liveness check |
 | GET `/css/base.css`, `/css/style.css`, `/js/main.js`, `/js/login.js` | Static shared/page assets |
 
-Home, Login and workspaces use `Cache-Control: no-store`; a session-cookie lookup requiring an unavailable DB returns the existing 503 EJS error page. Protected pages return 401 HTML to Guests and 403 HTML to the wrong role; invalid edit/review IDs return 400 HTML. A well-formed ID is not proof of article existence/ownership: these pages currently display no article data. Unknown authorized page URLs still render 404 EJS; unknown API URLs still return the shared JSON error.
+Home, public article, Login and workspaces use `Cache-Control: no-store`; a session-cookie lookup requiring an unavailable DB returns the existing 503 EJS error page. Protected pages return 401 HTML to Guests and 403 HTML to the wrong role; invalid edit/review IDs return 400 HTML. A well-formed ID is not proof of article existence/ownership: Reporter/Editor scaffolds currently display no article data. Unknown authorized page URLs still render 404 EJS; unknown API URLs still return the shared JSON error.
+
+The public article page calls the same `getPublic` service as the JSON detail API, not an internal HTTP endpoint. EJS escapes the entire approved plain-text body; CSS preserves line breaks. No article-body fetch or page-specific JS is required. Neither API reads nor page visits record views yet. The feed uses `/js/feed.js` and `/css/feed.css`; the detail uses `/css/article.css`.
 
 Login uses the existing POST auth route; Logout uses the existing DELETE session route. Both require browser JavaScript and redirect home on success. Navigation refreshes through the existing GET session API and displays only the matching role's workspace link. No authentication endpoints, existing JSON contracts or role redirects changed. Workspace pages load `/css/reporter.css` or `/css/editor.css` and their own scripts under `/js/reporter/` or `/js/editor/`; the scripts contain no feature behavior yet.
 
