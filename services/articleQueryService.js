@@ -1,6 +1,6 @@
 const Article = require("../models/Article");
-const { statuses } = require("../config/articleRules");
-const { id, allowedFields } = require("../utils/validation");
+const { statuses, categories } = require("../config/articleRules");
+const { id, allowedFields, text } = require("../utils/validation");
 const requireActor = require("../utils/authorization");
 const httpError = require("../utils/httpError");
 const { PAGE_SIZE, cursorFilter, page } = require("../utils/pagination");
@@ -63,10 +63,20 @@ function publicArticleDto(article, includeBody = false) {
 }
 
 async function listPublic(query) {
-  allowedFields(query, ["cursor"], "query");
-  const rows = await Article.find({ $and: [publicFilter(), cursorFilter(query.cursor, "publishedAt")] })
+  allowedFields(query, ["cursor", "q", "category", "sort"], "query");
+  const filter = publicFilter();
+  const search = query.q === undefined ? "" : text(query.q, "q", { max: 100 });
+  if (search) filter.$text = { $search: search };
+  if (query.category !== undefined) {
+    if (!categories.includes(query.category)) throw httpError(400, "INVALID_CATEGORY", "Invalid article category.");
+    filter["publishedContent.category"] = query.category;
+  }
+  const sort = query.sort === undefined ? "newest" : query.sort;
+  if (!["newest", "oldest"].includes(sort)) throw httpError(400, "INVALID_SORT", "Use newest or oldest sorting.");
+  const direction = sort === "oldest" ? 1 : -1;
+  const rows = await Article.find({ $and: [filter, cursorFilter(query.cursor, "publishedAt", direction)] })
     .select("_id publishedContent.title publishedContent.summary publishedContent.imageUrl publishedContent.category reporter publishedAt")
-    .sort({ publishedAt: -1, _id: -1 }).limit(PAGE_SIZE + 1).maxTimeMS(5000)
+    .sort({ publishedAt: direction, _id: direction }).limit(PAGE_SIZE + 1).maxTimeMS(5000)
     .populate("reporter", "_id username").lean();
   const result = page(rows, "publishedAt");
   result.data = result.data.map((article) => publicArticleDto(article));

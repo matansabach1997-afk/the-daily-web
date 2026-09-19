@@ -1,0 +1,17 @@
+<%- include("partials/header") %>
+    <main id="main-content" class="shell public-article">
+      <a href="/">Back to news</a>
+      <article>
+        <p class="eyebrow"><%= article.category %></p>
+        <h1 dir="auto"><%= article.title %></h1>
+        <p class="article-byline">By <%= article.reporter ? article.reporter.username : "The Daily Web" %> &middot;
+          <time datetime="<%= article.publishedAt.toISOString() %>"><%= article.publishedAt.toISOString().slice(0, 10) %></time>
+        </p>
+        <p class="article-summary" dir="auto"><%= article.summary %></p>
+        <% if (article.imageUrl) { %>
+          <img class="article-image" src="<%= article.imageUrl %>" alt="" referrerpolicy="no-referrer">
+        <% } %>
+        <div class="article-body" dir="auto"><%= article.body %></div>
+      </article>
+    </main>
+<%- include("partials/footer") %>
