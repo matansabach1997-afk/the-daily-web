@@ -1,0 +1,5 @@
+/* Teammate A: scope Reporter-specific styles to this workspace. */
+.reporter-workspace .scaffold-notice {
+  padding: 1rem;
+  border: 1px dashed #64748b;
+}

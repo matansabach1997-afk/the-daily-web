@@ -1,7 +1,8 @@
 <% const navUser = typeof currentUser === "undefined" ? null : currentUser; %>
 <nav class="navigation" aria-label="Main navigation">
   <a href="/">Home</a>
-  <% // Add role-specific links here only when real page routes exist. %>
+  <a id="reporter-workspace-link" href="/reporter"<% if (navUser?.role !== "reporter") { %> hidden<% } %>>Reporter Workspace</a>
+  <a id="editor-workspace-link" href="/editor"<% if (navUser?.role !== "editor") { %> hidden<% } %>>Editor Workspace</a>
   <a id="login-link" href="/login"<% if (navUser) { %> hidden<% } %>>Login</a>
   <div id="account-controls" class="account-controls"<% if (!navUser) { %> hidden<% } %>>
     <span id="current-user"><%= navUser ? `${navUser.username} (${navUser.role})` : "" %></span>

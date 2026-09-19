@@ -12,6 +12,10 @@ const userRoutes = require("./routes/userRoutes");
 const connectDatabase = require("./config/database");
 const indexRoutes = require("./routes/indexRoutes");
 const articleRoutes = require("./routes/articleRoutes");
+const reporterPageRoutes = require("./routes/reporterPageRoutes");
+const editorPageRoutes = require("./routes/editorPageRoutes");
+const commentRoutes = require("./routes/commentRoutes");
+const weatherRoutes = require("./routes/weatherRoutes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
@@ -30,11 +34,15 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/", indexRoutes);
+app.use("/reporter", reporterPageRoutes);
+app.use("/editor", editorPageRoutes);
 app.use("/api", loadSession);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/workspace/articles", workspaceRoutes);
 app.use("/api/articles", articleRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/weather", weatherRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
