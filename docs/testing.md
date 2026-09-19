@@ -31,6 +31,7 @@ An official portable MongoDB ZIP is acceptable local test infrastructure: extrac
 | `browserIdentity.test.js` | Actual helper in VM: UUID reuse, clear/corrupt/blocked storage and unavailable secure generator |
 | `articleTracking.test.js` | One anonymous POST per script execution; no retries, safe network/HTTP failure, missing identity/page |
 | `viewStats.test.js` | Isolated MongoDB persistence, public/revision validation, concurrent bucket increments, duplicate-key retry, UTC boundaries and intact SSR during a statistics-write failure |
+| `analytics.test.js` | Cross-browser/hour popularity totals, zero-view ordering, all viewed/search/category/sort combinations across pages, identity/cursor validation, Editor analytics totals/series/history/permissions, safe DTOs and actual lookup index plans |
 | `coreIntegration.test.js` | Existing auth/User CRUD, uniqueness, session digest/expiry/logout/password revocation, removed User, repeatable index setup and real Node process restart with the same cookie |
 | `ui.test.js` | Shared home/login/404 shell, Reporter/Editor session-aware HTML, authenticated login redirect, logout/revoked cookie, unchanged bad-login API contract |
 | `scripts/smoke-test.js` | Original six HTTP status/content-type checks against an isolated DB, no in-memory Article fallback |
@@ -38,6 +39,16 @@ An official portable MongoDB ZIP is acceptable local test infrastructure: extrac
 `runtime.test.js` also checks the guest Login page/assets without MongoDB and a controlled EJS 503 when a session lookup needs an unavailable database.
 
 Test fixtures are deliberately small and temporary; they are not the team's 500-article seed. The index explain check proves the declared index supports the public sort; it is not a thousands-of-readers load benchmark. Simultaneous editing, external image availability and deferred feature UI behavior are not claimed as tested.
+
+## Verified popularity/viewed/analytics backend run - 2026-09-19
+
+- `npm.cmd run check:syntax`: PASS, 76 JavaScript files.
+- `npm.cmd run test:unit`: PASS, 12 tests.
+- `npm.cmd test`: PASS, 69 tests, zero failures/skips, including seven new analytics/query tests. The final rerun also covers multiple hourly points, the exclusive period end and update markers when first publication lies outside the window.
+- `npm.cmd run test:smoke`: PASS, all six HTTP checks.
+- Real MongoDB tests used isolated local databases; a final read-only inventory found no remaining `the_daily_web_test_*` databases. No development fixtures were created.
+- Before/after SHA-256 inventories verified that models, workflow, package files, frontend and all existing teammate-owned files were unchanged. No Git operations or dependencies added.
+- This is backend/index-plan verification, not a concurrent-reader load benchmark or final UI/browser test. See [analytics](analytics.md) for exact contracts and known pagination/resolution limits.
 
 ## Shared UI browser checks
 

@@ -7,7 +7,7 @@ Base URL: `http://127.0.0.1:3000`. JSON requests use `Content-Type: application/
 - User: `{ _id, username, role }`; never passwordHash.
 - Content: `{ title, summary, body, category, imageUrl }` (all strings).
 - PrivateArticle: `{ _id, reporter: { _id, username } | null, workingContent, publishedContent, status, editorNote, publishedAt, publicationHistory, createdAt, updatedAt }`.
-- PublicCard: `{ _id, title, summary, imageUrl, category, reporter: { _id, username } | null, publishedAt }`.
+- PublicCard: `{ _id, title, summary, imageUrl, category, reporter: { _id, username } | null, publishedAt }`; `sort=popularity` additionally returns numeric `totalViews` per card.
 - PublicDetail: PublicCard plus `body`, always from publishedContent.
 - Item: `{ data: item }`; list: `{ data: [...], meta: { nextCursor: string | null, hasMore: boolean } }`.
 - Errors: `{ error: { code, message, fields? }, requestId }`. Every response has `X-Request-Id`; API responses use `Cache-Control: no-store`.
@@ -39,13 +39,13 @@ No public registration or new Admin role. Editors cannot change roles or use the
 | GET `/api/workspace/articles` | Reporter own / Editor all | optional `status`, `cursor`; optional `reporterId` for Editor only | 200 PrivateArticle list, updatedAt descending | 400 invalid filters/cursor, 403 Reporter using reporterId |
 | GET `/api/workspace/articles/:id` | Owner Reporter / Editor | None | 200 Item PrivateArticle | 400 ID, 404 missing/not owned |
 
-The private namespace is the only source for workingContent, status, note and history. UI roles do not replace these server restrictions.
+The private namespace provides workingContent, status, note and complete history. Public article reads expose none of these; the separate Editor analytics endpoint exposes only history-derived markers in its requested window. UI roles do not replace these server restrictions.
 
 ## Public reads and Article writes
 
 | Method/path | Caller | Body/query | Success | Main errors |
 | --- | --- | --- | --- | --- |
-| GET `/api/articles` | Anyone | optional `cursor`, `q`, `category`, `sort=newest\|oldest` | 200 PublicCard list, first publishedAt order; default newest | 400 unsupported query/cursor/category/sort, 422 search length |
+| GET `/api/articles` | Anyone | optional `cursor`, `q`, `category`, `sort=newest\|oldest\|popularity`, `viewed=true\|false`, `browserId` | 200 PublicCard list; default newest | 400 unsupported query/cursor/category/sort/viewed/identity, 422 search length |
 | GET `/api/articles/:id` | Anyone | None | 200 Item PublicDetail | 400 ID, 404 absent/unpublished |
 | POST `/api/articles` | Reporter | `{workingContent:{...}}`; fields may be omitted on creation | 201 Item PrivateArticle, draft | 400, 403, 422 |
 | PATCH `/api/articles/:id/working-content` | Owner Reporter draft/returned; Editor draft/pending/returned | `{workingContent:Content}`; all five keys, empty strings allowed | 200 Item PrivateArticle | 400 shape, 404 ownership, 409 state, 422 content |
@@ -73,14 +73,16 @@ Example save body:
 }
 ```
 
-See [workflow](article-workflow.md) for lengths, validation and all transitions. Public search/filter/sort is specified below. Popularity/viewed parameters, comments, analytics and weather endpoints remain outside this implementation. Do not create duplicate Article routes/controllers/services.
+See [workflow](article-workflow.md) for lengths, validation and all transitions. Public search/filter/sort is specified below. Popularity/viewed and Editor analytics now reuse the existing services; Comments and Weather remain deferred. Do not create duplicate Article routes/controllers/services.
 
 ### Public feed query contract
 
 - `q`: optional string, trimmed, maximum 100 characters; blank means no search. MongoDB text search of **publishedContent.title only**, not summary/body/workingContent. Case-insensitive whole words; multiple words match any term; quoted phrases and minus-term exclusion follow MongoDB `$text` syntax. This is not substring/autocomplete search. The index uses `default_language: none` (no stemming or stop-word removal).
 - `category`: omit for all, otherwise exactly one of `technology`, `science`, `culture`, `sport`, `local`, checked against the approved category only.
-- `sort`: `newest` (default) or `oldest`. Orders by first `publishedAt`, then `_id` in the same direction. Later approval history does not change that date.
-- `cursor`: existing opaque pagination token. Keep q/category/sort unchanged when using it; reset it when any control changes. Tokens are not signed query snapshots. Each response contains up to 20 cards, plus the unchanged `meta.nextCursor/hasMore` contract. No total-count query or browser-side full-collection filtering.
+- `sort`: `newest` (default) or `oldest` orders by first `publishedAt`, then `_id` in the same direction. Later approvals do not change that date. `popularity` orders by the sum of all recorded ViewStat views descending, then `_id` descending; articles without views have zero. Only popularity cards include totalViews; no counter is stored on Article.
+- `viewed`: optional exact string `true` or `false`, requiring `browserId` as a valid UUID v4. Viewed means any ViewStat exists for article/browser, independent of hour/count; unviewed means none. Filtering happens server-side before pagination. Both guests and authenticated users use browser identity, not account history.
+- `browserId`: optional unless viewed is supplied; validated whenever supplied, normalized lowercase. No browser-supplied viewed-ID arrays. A client without identity can still use the normal/popularity feed by omitting viewed/browserId. Invalid/missing required identity returns 400.
+- `cursor`: existing opaque pagination token. Keep q/category/sort/viewed/browserId unchanged when using it; reset it when any control changes. Tokens are not signed query snapshots. Each response contains up to 20 cards, plus the unchanged `meta.nextCursor/hasMore` contract. Popularity uses a numeric totalViews/ID cursor. New views can move ranking between pages, so deduplicate/reset on refresh. No total-count query or browser-side full-collection filtering.
 - Unsupported/repeated filter values return controlled errors. Pagination under concurrent publication/deletion is not a snapshot; the browser deduplicates IDs.
 
 Example: `GET /api/articles?q=telescope&category=science&sort=oldest`.
@@ -111,7 +113,15 @@ The public article page calls the same `getPublic` service as the JSON detail AP
 | --- | --- | --- | --- | --- |
 | POST `/api/view-stats` | Anyone, no login | Only `{articleId,browserId}`; no query | 204, no body | 400 invalid ID/UUID/shape/fields, 404 non-public/missing article, 503 DB unavailable |
 
-`browserId` is a UUID v4 (uppercase accepted, stored lowercase), a client-controlled label, not authentication. Server-selected time determines the article/browser/UTC-hour counter. Each accepted POST adds one, including repeat visits; no automatic client retry or unique-view deduplication. No raw-record/aggregation endpoints. The page tracker omits session credentials. See [view semantics and lifecycle](view-tracking.md).
+`browserId` is a UUID v4 (uppercase accepted, stored lowercase), a client-controlled label, not authentication. Server-selected time determines the article/browser/UTC-hour counter. Each accepted POST adds one, including repeat visits; no automatic client retry or unique-view deduplication. No raw-record endpoint. The page tracker omits session credentials. See [view semantics and lifecycle](view-tracking.md).
+
+### Editor analytics
+
+| Method/path | Caller | Query | Success | Main errors |
+| --- | --- | --- | --- | --- |
+| GET `/api/view-stats/articles/:id/analytics` | Editor only | optional `from`, `to`: canonical UTC ISO hour boundaries including milliseconds | 200 `{data:{articleId,publishedAt,totalViews,period:{from,to,interval:"hour"},periodViews,series:[{bucketStart,views}],publicationMarkers:[{at,type}]}}` | 400 ID/period/query, 401 Guest, 403 Reporter, 404 missing Article, 503 DB |
+
+totalViews covers all recorded time; series/periodViews cover `[from,to)`, combining all browsers per hour. Default: last 30 days through the next hour boundary; maximum 90 days. Missing hours mean zero. Markers come only from publicationHistory (`publication` for the first entry, `update` afterwards) within that window. Editors may inspect any existing article; no content or browser identities are returned. See [analytics](analytics.md) for exact bounds, examples, indexes and pagination limitations. No final analytics/feed-controls UI is implemented.
 
 Login uses the existing POST auth route; Logout uses the existing DELETE session route. Both require browser JavaScript and redirect home on success. Navigation refreshes through the existing GET session API and displays only the matching role's workspace link. No authentication endpoints, existing JSON contracts or role redirects changed. Workspace pages load `/css/reporter.css` or `/css/editor.css` and their own scripts under `/js/reporter/` or `/js/editor/`; the scripts contain no feature behavior yet.
 

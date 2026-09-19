@@ -48,6 +48,10 @@ After JSON/static handling, `/api` requests pass through `loadSession` in `app.j
 
 `articleQueryService` owns private reads and public reads. Private queries restrict Reporters to their own records in MongoDB. Public queries require approved content plus a publication date, independently of workflow status. Public projections/DTOs exclude working content, editor notes, status and history.
 
+Public popularity/viewed queries reuse that service: Article public filter and approved-only projection -> indexed ViewStat lookup -> existence filtering and/or lifetime sum -> deterministic score/date plus ID ordering -> 20-card DTO page. Ordinary date queries keep the original find path. No Article counter, new collection or browser-side filtering of loaded cards is needed.
+
+Editor analytics follows `/api/view-stats/articles/:id/analytics` -> existing session/role/database guards -> `viewStatController.analytics` -> `viewStatService.getAnalytics` -> Article history and ViewStat aggregation -> safe JSON. The service also checks the Editor role. It returns lifetime/period totals, hourly series and real approval markers, never article content or browser IDs. See [analytics](analytics.md) for the query contract and limits. The final feed controls and graph remain deferred.
+
 `articleWorkflowService` validates action-specific inputs and performs status-guarded, single-document updates. Approval sets the public snapshot and pushes history in the same atomic operation. There are no transactions, revision counters or simultaneous-edit guarantees. Future clients must serialize saves and finish saving before submitting.
 
 Dates, ownership and workflow status cannot be supplied through general content saves. Start Revision copies the approved snapshot. Hard deletion removes the Article directly; dependent cleanup must be added by feature owners when dependent collections actually exist.

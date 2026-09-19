@@ -2,7 +2,7 @@
 
 ## Scope and flow
 
-This central layer records anonymous public-article views only. No popularity, viewed/unviewed, analytics endpoints/graphs, Comments, rate limiting, Weather or seed features are added. Teammate files and Article workflow/model semantics are unchanged.
+The recording layer tracks anonymous public-article views. The subsequent central [analytics backend](analytics.md) reuses these records for popularity, viewed/unviewed filtering and Editor analytics. No final graph/feed-controls UI, Comments, rate limiting, Weather or seed features are added. Teammate files and Article workflow/model semantics are unchanged.
 
 ```text
 GET /articles/:id -> existing public service -> complete article.ejs HTML
@@ -49,8 +49,8 @@ Collection: `viewstats`.
 | createdAt / updatedAt | Mongoose timestamps |
 
 - Unique `{article:1,browserId:1,bucketStart:1}`: one counter per combination under concurrent upserts.
-- `{article:1,bucketStart:1}`: future article/time aggregation across browsers.
-- `{browserId:1,article:1}`: future browser/article existence queries.
+- `{article:1,bucketStart:1}`: article totals/time aggregation across browsers.
+- `{browserId:1,article:1}`: browser/article existence queries (the unique article/browser/hour index also supports them).
 
 `$inc` avoids read-modify-save lost increments. `$max` prevents out-of-order writes moving lastViewedAt backwards. Duplicate-key insertion failure retries once as a non-upsert increment; arbitrary write failures are not retried. No transactions or replica set.
 
@@ -74,7 +74,9 @@ Public means a BSON date in publishedAt plus an existing non-null publishedConte
 
 Requests for already-deleted articles fail the visibility check. References do not cascade. Existing Article hard deletion is unchanged: historical buckets remain, and deletion concurrent with an already-validated POST can leave a historical bucket. Bounded dependent cleanup and its race policy must be integrated centrally with the other dependent collections; no cleanup framework is added here. Future public/Editor aggregation reads must enforce visibility/permissions.
 
-Deferred: trusted Guest identity/comment limit, ReadReceipt/viewed UI, popularity/totalViews, analytics/publication markers, protected ViewStat Read/Update/Delete compliance operations, retention/cleanup, Comments/Weather UI and demo seed. The current write-only API does not claim full ViewStat CRUD completion.
+Implemented next: popularity is the sum of recorded views; viewed means a matching article/browser bucket exists; Editor analytics returns totals/hourly series and actual publicationHistory markers. These queries enforce public visibility or Editor permission; no new indexes or Article counters are needed. See [analytics](analytics.md).
+
+Deferred: trusted Guest identity/comment limit, ReadReceipt, viewed/popularity controls, analytics graph, protected ViewStat management Update/Delete compliance operations, retention/cleanup, Comments/Weather UI and demo seed. Recording plus aggregate reads do not claim full ViewStat CRUD completion.
 
 ## Tests
 
