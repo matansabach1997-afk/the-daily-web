@@ -16,6 +16,7 @@ const reporterPageRoutes = require("./routes/reporterPageRoutes");
 const editorPageRoutes = require("./routes/editorPageRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const weatherRoutes = require("./routes/weatherRoutes");
+const viewStatRoutes = require("./routes/viewStatRoutes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
@@ -43,6 +44,7 @@ app.use("/api/workspace/articles", workspaceRoutes);
 app.use("/api/articles", articleRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/weather", weatherRoutes);
+app.use("/api/view-stats", viewStatRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
