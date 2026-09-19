@@ -14,7 +14,7 @@ See [API contract](api-contract.md#public-feed-query-contract). Run `npm.cmd run
 
 The initial feed request fetches 20 cards. Search changes debounce for 300 ms; filters/sort submit immediately. Reset clears the cursor, loaded IDs and cards, aborts the old fetch and ignores late results. Pagination is serial; a Set prevents duplicate cards. IntersectionObserver triggers near the bottom (300px margin). Load more is a keyboard-accessible fallback. Failed pages preserve previous cards and cursor; only an explicit retry retries the failure. End/empty/error/loading feedback is visible and announced. There is no snapshot guarantee while editors publish/delete between requests.
 
-Article HTML is completely server-rendered from the approved DTO, with escaped text and preserved body line breaks. JavaScript is not required to retrieve/read its body. Missing/private/deleted IDs return shared HTML 404; malformed IDs 400; unavailable database 503. No view event is recorded yet.
+Article HTML is completely server-rendered from the approved DTO, with escaped text and preserved body line breaks. JavaScript is not required to retrieve/read its body. Missing/private/deleted IDs return shared HTML 404; malformed IDs 400; unavailable database 503. The subsequent [view-tracking layer](view-tracking.md) adds an independent best-effort POST without fetching/replacing the body.
 
 ## Automated checks
 
@@ -39,4 +39,4 @@ The implementation session could not perform visual browser checks: no connected
 
 ## Deliberately deferred
 
-Comments UI, BrowserIdentity, guest rate limiting, ViewStat/visit counting, popularity, viewed/unviewed, analytics, Weather UI and seed data. No Reporter/Editor/Comments/Weather/Seed-owned implementation is changed by this feature.
+Comments UI, trusted server Guest identity/rate limiting, popularity, viewed/unviewed, analytics, Weather UI and seed data remain deferred. The client BrowserIdentity helper and ViewStat recording are now implemented centrally. No Reporter/Editor/Comments/Weather/Seed-owned implementation is changed by these central features.

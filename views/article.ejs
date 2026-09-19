@@ -1,7 +1,7 @@
 <%- include("partials/header") %>
     <main id="main-content" class="shell public-article">
       <a href="/">Back to news</a>
-      <article>
+      <article data-public-article-id="<%= article._id %>">
         <p class="eyebrow"><%= article.category %></p>
         <h1 dir="auto"><%= article.title %></h1>
         <p class="article-byline">By <%= article.reporter ? article.reporter.username : "The Daily Web" %> &middot;
@@ -14,4 +14,6 @@
         <div class="article-body" dir="auto"><%= article.body %></div>
       </article>
     </main>
+    <script src="/js/browser-identity.js" defer></script>
+    <script src="/js/article.js" defer></script>
 <%- include("partials/footer") %>

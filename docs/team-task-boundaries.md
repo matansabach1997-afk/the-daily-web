@@ -114,8 +114,9 @@ The common header accepts an optional, server-chosen `pageStylesheet`; A/B contr
 - Public news feed, search/category/date-sort/infinite-scroll UI and query extensions are now implemented centrally; changes remain centrally owned.
 - Public `views/article.ejs` and complete approved content in initial HTML are now implemented centrally.
 - Comments UI integration into the existing `article.ejs` remains future central work.
-- BrowserIdentity, Guest comment limiting/identity, ReadReceipt and viewed/unviewed.
-- ViewStat, per-visit counting, popularity and analytics integration.
+- Client BrowserIdentity and ViewStat recording are now central implementations, including their files, tests and index registration.
+- Trusted Guest identity/comment limiting, ReadReceipt and viewed/unviewed remain future work. The localStorage UUID is replaceable, not authentication or the sole comment limiter.
+- Popularity, analytics, ViewStat management/aggregation and dependent cleanup remain central future work; current recording uses article/browser/hour counters only.
 - Weather widget/sidebar; full defense seed combining article/comment/statistics data.
 - Comment-dependent Article deletion cleanup and registration of future model indexes.
 - Shared configuration, package scripts, navigation, API docs and cross-feature regression tests.

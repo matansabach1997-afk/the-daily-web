@@ -90,4 +90,10 @@ async function getPublic(articleId) {
   return publicArticleDto(article, true);
 }
 
-module.exports = { ownershipFilter, privateArticleDto, findAccessibleArticle, listPrivate, listPublic, getPublic };
+async function requirePublicArticle(articleId) {
+  // Tracking only needs existence, not the article body or reporter population.
+  const article = await Article.exists({ _id: id(articleId), ...publicFilter() }).maxTimeMS(5000);
+  if (!article) throw httpError(404, "ARTICLE_NOT_FOUND", "Article not found.");
+}
+
+module.exports = { ownershipFilter, privateArticleDto, findAccessibleArticle, listPrivate, listPublic, getPublic, requirePublicArticle };

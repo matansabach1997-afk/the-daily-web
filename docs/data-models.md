@@ -1,6 +1,6 @@
 # Current persistent data
 
-Only `User`, `Article`, `Session` are implemented in Lead Core. MongoDB normally stores them as `users`, `articles`, `sessions`. A schema is the field/validation definition; a model supplies operations such as `find`, `create` and `findOneAndUpdate`. An ObjectId reference stores another document's ID; `populate` loads selected referenced fields. It is not a foreign-key constraint.
+`User`, `Article`, `Session` and central `ViewStat` are implemented. MongoDB stores them as `users`, `articles`, `sessions`, `viewstats`. A schema is the field/validation definition; a model supplies operations such as `find`, `create` and `findOneAndUpdate`. An ObjectId reference stores another document's ID; `populate` loads selected referenced fields. It is not a foreign-key constraint.
 
 ## User
 
@@ -49,6 +49,12 @@ Indexes (the `_id` index is automatic):
 
 Cookie: `daily_web_session`, HttpOnly, SameSite=Lax, Path=/, seven-day max age; Secure in production (use HTTPS). Cookie carries the raw random token; the database stores its hash. Restarting Node retains MongoDB records, so users remain authenticated until expiry/logout/password change. Login replaces that browser's previous session; logout deletes its record and clears the cookie. Password changes revoke all user's sessions. No session secret in a process-local map is required. Guests have no User/Session records in this phase.
 
-## Later team-owned collections
+## ViewStat and BrowserIdentity
 
-Comment, ViewStat, BrowserIdentity and ReadReceipt remain deferred, not pre-created. They will complete the approved seven-collection design. No RateLimit collection, transactions or replica-set deployment. Public search/category indexes are now declared above; popularity/read-state indexes remain deferred. `npm run db:indexes` creates declared indexes; it does not drop unknown existing ones or migrate data.
+ViewStat stores `article` (Article reference), `browserId` (lowercase UUID v4), `bucketStart` (UTC hour), `views` (positive integer), `lastViewedAt` and timestamps. Atomic increments merge repeat visits within an hour. Unique `(article,browserId,bucketStart)` prevents duplicate buckets; `(article,bucketStart)` and `(browserId,article)` support future time/browser queries. Article semantics are unchanged. Run the index setup script before tracking traffic; ViewStat uses explicit collection/index initialization.
+
+BrowserIdentity is a helper storing a random UUID in localStorage, not a MongoDB collection or trusted server identity. Read [view tracking](view-tracking.md) for lifecycle, growth, deletion boundaries and future work.
+
+## Later collections
+
+Comment, a server-side BrowserIdentity collection and ReadReceipt remain deferred. No RateLimit collection, transactions or replica-set deployment. Public search/category and ViewStat indexes are declared; popularity/read-state features remain deferred. `npm run db:indexes` creates declared indexes; it does not drop unknown existing ones or migrate data.

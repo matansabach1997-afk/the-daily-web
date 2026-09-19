@@ -86,6 +86,12 @@ test("database-backed APIs return 503 when no database is connected", async () =
   assert.equal(articlePage.status, 503);
   assert.match(articlePage.headers.get("content-type"), /text\/html/);
   assert.equal((await fetch(http.baseUrl + "/health")).status, 200);
+  const tracking = await fetch(http.baseUrl + "/api/view-stats", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ articleId: "000000000000000000000001", browserId: "d1689a9f-3799-4e90-b854-c3e720c599ea" }),
+  });
+  assert.equal(tracking.status, 503);
+  assert.equal((await tracking.json()).error.code, "DATABASE_UNAVAILABLE");
 });
 
 test("test database safeguard refuses development and remote databases", () => {

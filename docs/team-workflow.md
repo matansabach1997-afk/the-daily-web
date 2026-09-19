@@ -24,7 +24,7 @@ Read repository AGENTS.md, README, API contract and article workflow before star
 | C | Comments Backend/API | Mounted `/api/comments`; existing session, validation and error conventions |
 | D | Seed Data + Weather Backend | Mounted `/api/weather`; existing User/Article models and version/date semantics |
 
-BrowserIdentity, ReadReceipt, Guest comment limiting and dependent hard-delete cleanup remain central integration work. C must not enable Guest writes before trusted identity and limiting exist. No placeholder collections, transactions or replica sets are introduced. The explicit custom CSRF-token infrastructure and login throttling remain deferred; HttpOnly/SameSite=Lax cookies plus server auth/roles/ownership remain the current policy. Review origin/CSRF hardening before any broader deployment rather than claiming cookie flags alone solve every CSRF risk.
+The client BrowserIdentity helper and ViewStat recording layer are now central implementations. Trusted server Guest identity, ReadReceipt, Guest comment limiting and dependent hard-delete cleanup remain central integration work. C must not enable Guest writes before trusted identity and limiting exist; the replaceable localStorage UUID alone is not sufficient. No placeholder collections, transactions or replica sets are introduced. The explicit custom CSRF-token infrastructure and login throttling remain deferred; HttpOnly/SameSite=Lax cookies plus server auth/roles/ownership remain the current policy. Review origin/CSRF hardening before any broader deployment rather than claiming cookie flags alone solve every CSRF risk.
 
 ## Shared UI extension points
 
