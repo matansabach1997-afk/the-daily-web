@@ -1,0 +1,5 @@
+/* Teammate B: scope Editor-specific styles to this workspace. */
+.editor-workspace .scaffold-notice {
+  padding: 1rem;
+  border: 1px dashed #64748b;
+}

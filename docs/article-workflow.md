@@ -24,10 +24,10 @@ Creation accepts `{ "workingContent": {} }`, or a partial object with valid supp
 
 ## Autosave integration, not implemented here
 
-Member 2 should debounce changes and serialize requests: one save in flight, retain the newest pending snapshot, send it after completion. Do not send competing saves or submit before the final save succeeds. On load use the private detail endpoint's workingContent. Show saving/saved/error state; retry deliberately, not by sending older snapshots after newer ones. A complete blank field is an intentional user deletion and is allowed.
+Teammate A should debounce changes and serialize requests: one save in flight, retain the newest pending snapshot, send it after completion. Do not send competing saves or submit before the final save succeeds. On load use the private detail endpoint's workingContent. Show saving/saved/error state; retry deliberately, not by sending older snapshots after newer ones. A complete blank field is an intentional user deletion and is allowed.
 
 No revision counters, simultaneous-edit support or optimistic concurrency is promised. HTTP state guards prevent invalid transitions but do not resolve two people editing the same article. Later blur/navigation/pagehide behavior must not claim delivery is guaranteed after an abrupt browser/process crash; confirm server acknowledgements and explain any recovery fallback separately.
 
 ## Deletion boundary
 
-Only Article currently has dependent business data in scope, so there are no placeholder cleanup collections. Comments, ReadReceipt and ViewStat owners must integrate bounded, repeatable dependent cleanup when their models are added. No soft deletion, background cleanup framework or transaction requirement is introduced.
+Only Article currently has dependent business data in scope, so there are no placeholder cleanup collections. The central integrator must wire bounded, repeatable dependent cleanup when Comment, ReadReceipt and ViewStat models are added; feature teammates must not edit the shared Article workflow without approval. No soft deletion, background cleanup framework or transaction requirement is introduced.
