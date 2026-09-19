@@ -49,6 +49,7 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 - Safe MongoDB-backed public list/detail APIs with batches of 20 and cursor pagination.
 - Shared validation, controlled API errors, request IDs and sanitized operational logs.
 - Shared EJS header/navigation/footer, base styling and browser Login/Logout using the existing auth APIs.
+- Role-protected Reporter/Editor page scaffolds and empty, pre-mounted Comments/Weather API routers; see [A/B/C/D ownership](docs/team-task-boundaries.md).
 - Automated tests using Node's built-in test runner, including real process-restart session persistence.
 
 `publishedAt` always means **first publication**. Each approval appends its timestamp to `publicationHistory`. A pending/returned/draft revision never hides or replaces the previous public content.
@@ -57,7 +58,7 @@ Not implemented here: Reporter/autosave UI, public feed/search/filter/infinite-s
 
 ## Shared UI foundation
 
-Open `/login` and use an account created through the existing account script or User API. The browser submits to `POST /api/auth/login`; MongoDB stores the existing Session and the browser retains its HttpOnly cookie. Successful login returns to `/`. Authenticated visitors to `/login` are redirected to `/`; there are no placeholder workspace links.
+Open `/login` and use an account created through the existing account script or User API. The browser submits to `POST /api/auth/login`; MongoDB stores the existing Session and the browser retains its HttpOnly cookie. Successful login returns to `/`. Authenticated visitors to `/login` are redirected to `/`. Navigation includes only the user's matching Reporter/Editor Workspace link. Those routes render protected scaffolds, not implemented article-management tools.
 
 Navigation displays the current username/role. `public/js/main.js` checks `GET /api/auth/session` on page display (including Back/Forward restores) and sends `DELETE /api/auth/session` for Logout. `public/js/login.js` handles only the login form. Neither script stores credentials/tokens or decides server permissions. Login/Logout require JavaScript; the login fields remain disabled until their submit handler is attached, preventing accidental password submission in a URL.
 

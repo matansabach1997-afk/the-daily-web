@@ -55,7 +55,7 @@ The private namespace is the only source for workingContent, status, note and hi
 | POST `/api/articles/:id/revisions` | Owner Reporter / Editor | No body or `{}` | 200 Item PrivateArticle, draft copied from public | 400, 404, 409 not published |
 | DELETE `/api/articles/:id` | Editor | No body or `{}` | 204, including already absent valid ID | 400, 403 |
 
-Public visibility depends on publishedContent and publishedAt, never the current status. Public APIs do not return workingContent, status, notes, history, body in list rows, passwordHash or session information. `publishedAt` stays at first approval even after updates. Detail requests do not yet record views; Member 5 will integrate that feature at the full-page visit boundary.
+Public visibility depends on publishedContent and publishedAt, never the current status. Public APIs do not return workingContent, status, notes, history, body in list rows, passwordHash or session information. `publishedAt` stays at first approval even after updates. Detail requests do not yet record views; central integration will add that feature at the full-page visit boundary.
 
 Example create body: `{ "workingContent": {} }`.
 
@@ -81,9 +81,17 @@ See [workflow](article-workflow.md) for lengths, validation and all transitions.
 | --- | --- |
 | GET `/` | 200 HTML skeleton using shared navigation; current session loaded |
 | GET `/login` | 200 HTML login form for guests; 302 to `/` for authenticated users |
+| GET `/reporter` | 200 Reporter Workspace scaffold; Reporter only |
+| GET `/reporter/edit/:id` | 200 Reporter edit scaffold; Reporter only; validates ID format, no article read/write yet |
+| GET `/editor` | 200 Editor Workspace scaffold; Editor only |
+| GET `/editor/review/:id` | 200 Editor review scaffold; Editor only; validates ID format, no article read/write yet |
 | GET `/health` | Existing `{status:"ok"}` HTTP liveness check |
 | GET `/css/base.css`, `/css/style.css`, `/js/main.js`, `/js/login.js` | Static shared/page assets |
 
-Home and Login use `Cache-Control: no-store`; a session-cookie lookup requiring an unavailable DB returns the existing 503 EJS error page. Unknown page URLs still render 404 EJS; unknown API URLs still return the shared JSON error.
+Home, Login and workspaces use `Cache-Control: no-store`; a session-cookie lookup requiring an unavailable DB returns the existing 503 EJS error page. Protected pages return 401 HTML to Guests and 403 HTML to the wrong role; invalid edit/review IDs return 400 HTML. A well-formed ID is not proof of article existence/ownership: these pages currently display no article data. Unknown authorized page URLs still render 404 EJS; unknown API URLs still return the shared JSON error.
 
-Login uses the existing POST auth route; Logout uses the existing DELETE session route. Both require browser JavaScript and redirect home on success. Navigation refreshes through the existing GET session API. No new authentication endpoints, API response changes, role redirects or placeholder workspace pages were added. Full public article and workspace pages remain team features.
+Login uses the existing POST auth route; Logout uses the existing DELETE session route. Both require browser JavaScript and redirect home on success. Navigation refreshes through the existing GET session API and displays only the matching role's workspace link. No authentication endpoints, existing JSON contracts or role redirects changed. Workspace pages load `/css/reporter.css` or `/css/editor.css` and their own scripts under `/js/reporter/` or `/js/editor/`; the scripts contain no feature behavior yet.
+
+## Reserved backend namespaces — not implemented endpoints
+
+`/api/comments` and `/api/weather` each mount one empty Express Router after the existing `/api` session loader. Requests currently fall through to the shared JSON 404; there are no success placeholders, models, provider calls or CRUD implementations. C and D add endpoints inside their own routers without editing `app.js`. Future input/response contracts belong in their task notes for central integration; current Article/auth contracts remain unchanged. See [ownership boundaries](team-task-boundaries.md).

@@ -9,6 +9,8 @@ Browser / Postman
   <- explicit DTO <- JSON response
 
 GET / or /login -> indexRoutes -> loadSession -> homeController -> shared EJS -> HTML
+GET /reporter/* -> reporterPageRoutes -> loadSession -> requireRole(reporter) -> reporterPageController -> EJS scaffold
+GET /editor/* -> editorPageRoutes -> loadSession -> requireRole(editor) -> editorPageController -> EJS scaffold
 Errors -> errorHandler -> JSON for /api, EJS for page requests
 ```
 
@@ -52,6 +54,14 @@ Dates, ownership and workflow status cannot be supplied through general content 
 Current `/` remains a skeleton, now using the shared header/navigation/footer alongside Login and error pages. `GET /login` renders a form for guests or redirects authenticated users to `/`. `login.js` sends JSON to the existing auth API and returns home on success. `main.js` refreshes the session display and handles Logout. The cookie stays HttpOnly; browser role display is not authorization.
 
 The future full public article page must render the complete approved body in its initial HTML, using the public query service rather than making an internal HTTP request. Ajax will handle feed interactions/comments/autosave. Escape article text with EJS `<%=` or browser `textContent`; this core does not accept article bodies as trusted HTML.
+
+## Isolated team integration points
+
+Reporter and Editor page routers are mounted once in `app.js`, load the existing session once, and apply the existing role guard to the entire namespace. Their controllers render placeholders only. Edit/review IDs are format-validated; no article is queried or changed. Future private reads/writes must go through the existing Article contracts, not new copies of ownership/workflow logic.
+
+Each area owns its EJS directory, page-specific JS directory and scoped stylesheet. The shared header accepts an optional server-chosen `pageStylesheet`; shared navigation and `main.js` handle role-link visibility. Login/logout/session behavior and destinations are unchanged.
+
+The empty Comments and Weather routers are already mounted under `/api/comments` and `/api/weather`, after shared session loading. They currently fall through to the normal JSON 404. No Comment/Weather service or controller, new model, seed script, external fetch or cache exists yet. A/B/C/D ownership and central follow-up integration are listed in [team task boundaries](team-task-boundaries.md).
 
 ## Errors and logs
 
