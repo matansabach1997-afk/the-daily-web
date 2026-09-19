@@ -30,7 +30,7 @@ The controller translates HTTP inputs/outputs. The service holds reusable busine
 | `middleware` | Request IDs, session lookup, authentication/roles, DB guard, 404 and centralized errors |
 | `controllers` | Read request inputs, call services, choose JSON/status or existing EJS templates |
 | `services` | Password/session/User operations and Article visibility/workflow rules |
-| `models` | User, Session and Article schemas/indexes |
+| `models` | User, Session, Article and ViewStat schemas/indexes |
 | `utils` | Small validation, cookie, logging, DTO, authorization and pagination helpers |
 | `views`, `public` | Shared EJS shell, Login page, base CSS and login/session/logout browser behavior |
 | `scripts`, `tests` | Local maintenance and repeatable isolated checks |
@@ -58,7 +58,9 @@ Dates, ownership and workflow status cannot be supplied through general content 
 
 `GET /login` still renders a form for guests or redirects authenticated users to `/`. `login.js` sends JSON to the existing auth API and returns home on success. `main.js` refreshes the session display and handles Logout. The cookie stays HttpOnly; browser role display is not authorization.
 
-`GET /articles/:id` renders the complete approved body in its initial HTML using `articleQueryService.getPublic`, with no internal HTTP request. `article.ejs` uses escaped EJS `<%=` and preserves plain-text line breaks through CSS. Title, category, first publication date, reporter, summary and main image accompany the body. It remains readable without JavaScript. No empty article.js is created. Private content never reaches these templates. Comments, view counting, viewed state, popularity, analytics and Weather UI remain unimplemented.
+`GET /articles/:id` renders the complete approved body in its initial HTML using `articleQueryService.getPublic`, with no internal HTTP request. `article.ejs` uses escaped EJS `<%=` and preserves plain-text line breaks through CSS. Title, category, first publication date, reporter, summary and main image accompany the body. It remains readable without JavaScript. Private content never reaches these templates. Comments, viewed state, popularity, analytics and Weather UI remain unimplemented.
+
+After HTML parsing, `browser-identity.js` provides a same-origin localStorage UUID and `article.js` sends one anonymous POST to `/api/view-stats`. The route/database guard/controller/service validates inputs and calls `articleQueryService.requirePublicArticle` (exists-only, shared public filter). ViewStat atomically increments an article/browser/hour bucket. Article has no per-view array, auth tokens are not reused, and tracking failure never changes the page. This is best-effort client-reported counting, not unique-reader or abuse-proof analytics. See [view tracking](view-tracking.md) for initialization, growth and cleanup boundaries.
 
 Public CSS is page-scoped and uses a wrapping Flexbox card layout: one column at 360px, two at 768px, three at 1280px. Shared layout and teammate styles are unchanged. The homepage itself can render without a database for guests; its Ajax request then shows the existing API error. Article pages require MongoDB and use the shared EJS error handler.
 

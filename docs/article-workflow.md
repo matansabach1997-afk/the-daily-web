@@ -30,4 +30,4 @@ No revision counters, simultaneous-edit support or optimistic concurrency is pro
 
 ## Deletion boundary
 
-Only Article currently has dependent business data in scope, so there are no placeholder cleanup collections. The central integrator must wire bounded, repeatable dependent cleanup when Comment, ReadReceipt and ViewStat models are added; feature teammates must not edit the shared Article workflow without approval. No soft deletion, background cleanup framework or transaction requirement is introduced.
+Article hard deletion is unchanged. ViewStat counters now exist and currently remain as historical records when their Article is deleted; new tracking requests for an already-deleted article return 404. Bounded, repeatable dependent cleanup and concurrent-delete handling remain explicit central follow-up work alongside Comment/ReadReceipt integration; see [tracking lifecycle boundaries](view-tracking.md#lifecycle-boundaries--next-phase). Feature teammates must not edit the shared Article workflow without approval. No soft deletion, background cleanup framework or transaction requirement is introduced.

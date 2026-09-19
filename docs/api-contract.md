@@ -55,7 +55,7 @@ The private namespace is the only source for workingContent, status, note and hi
 | POST `/api/articles/:id/revisions` | Owner Reporter / Editor | No body or `{}` | 200 Item PrivateArticle, draft copied from public | 400, 404, 409 not published |
 | DELETE `/api/articles/:id` | Editor | No body or `{}` | 204, including already absent valid ID | 400, 403 |
 
-Public visibility depends on publishedContent and publishedAt, never the current status. Public APIs do not return workingContent, status, notes, history, body in list rows, passwordHash or session information. `publishedAt` stays at first approval even after updates. Detail requests do not yet record views; central integration will add that feature at the full-page visit boundary.
+Public visibility depends on publishedContent and publishedAt, never the current status. Public APIs do not return workingContent, status, notes, history, body in list rows, passwordHash or session information. `publishedAt` stays at first approval even after updates. JSON detail GETs do not record views; the full article page sends a separate best-effort tracking POST after rendering.
 
 Example create body: `{ "workingContent": {} }`.
 
@@ -103,7 +103,15 @@ Run the existing `npm.cmd run db:indexes` after updating: the Article model adds
 
 Home, public article, Login and workspaces use `Cache-Control: no-store`; a session-cookie lookup requiring an unavailable DB returns the existing 503 EJS error page. Protected pages return 401 HTML to Guests and 403 HTML to the wrong role; invalid edit/review IDs return 400 HTML. A well-formed ID is not proof of article existence/ownership: Reporter/Editor scaffolds currently display no article data. Unknown authorized page URLs still render 404 EJS; unknown API URLs still return the shared JSON error.
 
-The public article page calls the same `getPublic` service as the JSON detail API, not an internal HTTP endpoint. EJS escapes the entire approved plain-text body; CSS preserves line breaks. No article-body fetch or page-specific JS is required. Neither API reads nor page visits record views yet. The feed uses `/js/feed.js` and `/css/feed.css`; the detail uses `/css/article.css`.
+The public article page calls the same `getPublic` service as the JSON detail API, not an internal HTTP endpoint. EJS escapes the entire approved plain-text body; CSS preserves line breaks. JavaScript is not required for reading. Deferred `/js/browser-identity.js` and `/js/article.js` add best-effort view tracking only. The feed uses `/js/feed.js` and `/css/feed.css`; the detail uses `/css/article.css`.
+
+## Public view recording
+
+| Method/path | Caller | Body/query | Success | Main errors |
+| --- | --- | --- | --- | --- |
+| POST `/api/view-stats` | Anyone, no login | Only `{articleId,browserId}`; no query | 204, no body | 400 invalid ID/UUID/shape/fields, 404 non-public/missing article, 503 DB unavailable |
+
+`browserId` is a UUID v4 (uppercase accepted, stored lowercase), a client-controlled label, not authentication. Server-selected time determines the article/browser/UTC-hour counter. Each accepted POST adds one, including repeat visits; no automatic client retry or unique-view deduplication. No raw-record/aggregation endpoints. The page tracker omits session credentials. See [view semantics and lifecycle](view-tracking.md).
 
 Login uses the existing POST auth route; Logout uses the existing DELETE session route. Both require browser JavaScript and redirect home on success. Navigation refreshes through the existing GET session API and displays only the matching role's workspace link. No authentication endpoints, existing JSON contracts or role redirects changed. Workspace pages load `/css/reporter.css` or `/css/editor.css` and their own scripts under `/js/reporter/` or `/js/editor/`; the scripts contain no feature behavior yet.
 

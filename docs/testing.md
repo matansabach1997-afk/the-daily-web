@@ -28,6 +28,9 @@ An official portable MongoDB ZIP is acceptable local test infrastructure: extrac
 | `publicArticles.test.js` | Real 45-document fixture, 20/20/5 pagination, equal-date tie-break, public visibility across all states, no private leakage, invalid queries/IDs, public index and explain |
 | `publicNews.test.js` | Approved-title search (including Hebrew), category/date sort combinations, 20-item pagination, public EJS complete body/escaping, revision visibility, unavailable/deleted pages and index plans |
 | `feedClient.test.js` | Real client script with small DOM/fetch doubles: stale response protection, serial infinite scroll, deduplication, filter reset, error/retry, empty/end and load-more fallback; not a browser layout test |
+| `browserIdentity.test.js` | Actual helper in VM: UUID reuse, clear/corrupt/blocked storage and unavailable secure generator |
+| `articleTracking.test.js` | One anonymous POST per script execution; no retries, safe network/HTTP failure, missing identity/page |
+| `viewStats.test.js` | Isolated MongoDB persistence, public/revision validation, concurrent bucket increments, duplicate-key retry, UTC boundaries and intact SSR during a statistics-write failure |
 | `coreIntegration.test.js` | Existing auth/User CRUD, uniqueness, session digest/expiry/logout/password revocation, removed User, repeatable index setup and real Node process restart with the same cookie |
 | `ui.test.js` | Shared home/login/404 shell, Reporter/Editor session-aware HTML, authenticated login redirect, logout/revoked cookie, unchanged bad-login API contract |
 | `scripts/smoke-test.js` | Original six HTTP status/content-type checks against an isolated DB, no in-memory Article fallback |

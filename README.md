@@ -49,6 +49,7 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 - Safe MongoDB-backed public list/detail APIs, approved-title text search, category filtering, newest/oldest sorting and 20-card cursor pagination.
 - Public feed with debounced search, infinite scroll, retry/load-more fallback and page-scoped responsive CSS.
 - Public `/articles/:id` EJS page with the complete approved article in its initial HTML, readable without JavaScript.
+- Anonymous browser UUID helper and best-effort public article view recording into atomic article/browser/hour ViewStat counters; no analytics UI yet.
 - Shared validation, controlled API errors, request IDs and sanitized operational logs.
 - Shared EJS header/navigation/footer, base styling and browser Login/Logout using the existing auth APIs.
 - Role-protected Reporter/Editor page scaffolds and empty, pre-mounted Comments/Weather API routers; see [A/B/C/D ownership](docs/team-task-boundaries.md).
@@ -56,7 +57,9 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 
 `publishedAt` always means **first publication**. Each approval appends its timestamp to `publicationHistory`. A pending/returned/draft revision never hides or replaces the previous public content.
 
-Not implemented here: Reporter/autosave UI, viewed state, Editor UI, Comments/UI, BrowserIdentity, ReadReceipt, ViewStat/analytics/popularity, Weather/UI or large seed. No page-view counting is added yet.
+Not implemented here: Reporter/autosave UI, viewed state, Editor UI, Comments/UI, trusted server BrowserIdentity/Guest limiting, ReadReceipt, analytics/popularity, ViewStat management APIs, Weather/UI or large seed. Client-reported view counting is now implemented; it is not an abuse-proof or unique-reader metric.
+
+After updating, run `npm.cmd run db:indexes` before recording views: ViewStat requires its unique bucket index. The helper stores only `daily_web_browser_id` in localStorage, independently of authentication. Clearing storage changes the identity; blocked storage falls back to a document-only ID. See [view tracking](docs/view-tracking.md) for API, view semantics, initialization and lifecycle limitations.
 
 ### Public news experience
 
