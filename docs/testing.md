@@ -32,6 +32,8 @@ An official portable MongoDB ZIP is acceptable local test infrastructure: extrac
 | `articleTracking.test.js` | One anonymous POST per script execution; no retries, safe network/HTTP failure, missing identity/page |
 | `viewStats.test.js` | Isolated MongoDB persistence, public/revision validation, concurrent bucket increments, duplicate-key retry, UTC boundaries and intact SSR during a statistics-write failure |
 | `analytics.test.js` | Cross-browser/hour popularity totals, zero-view ordering, all viewed/search/category/sort combinations across pages, identity/cursor validation, Editor analytics totals/series/history/permissions, safe DTOs and actual lookup index plans |
+| `analyticsPage.test.js` | Editor-only central page (Guest 401 / Reporter 403 / Editor 200), shared role-aware navigation, static assets and feed control/script wiring |
+| `analyticsClient.test.js` | Real client script with DOM/fetch doubles: safe public article search/paging/selection, 7/30/90-day requests, stale responses, empty/low SVG data, zero-fill, exact supplied markers, resize math and visible retryable API/network errors |
 | `coreIntegration.test.js` | Existing auth/User CRUD, uniqueness, session digest/expiry/logout/password revocation, removed User, repeatable index setup and real Node process restart with the same cookie |
 | `ui.test.js` | Shared home/login/404 shell, Reporter/Editor session-aware HTML, authenticated login redirect, logout/revoked cookie, unchanged bad-login API contract |
 | `scripts/smoke-test.js` | Original six HTTP status/content-type checks against an isolated DB, no in-memory Article fallback |
@@ -39,6 +41,15 @@ An official portable MongoDB ZIP is acceptable local test infrastructure: extrac
 `runtime.test.js` also checks the guest Login page/assets without MongoDB and a controlled EJS 503 when a session lookup needs an unavailable database.
 
 Test fixtures are deliberately small and temporary; they are not the team's 500-article seed. The index explain check proves the declared index supports the public sort; it is not a thousands-of-readers load benchmark. Simultaneous editing, external image availability and deferred feature UI behavior are not claimed as tested.
+
+## Verified central view-insights UI run - 2026-09-20
+
+- `npm.cmd run check:syntax`: PASS, 81 JavaScript files.
+- `npm.cmd run test:unit`: PASS, 12 tests.
+- `npm.cmd test`: PASS, 78 tests, zero failures/skips. Includes nine added UI/integration tests and all existing backend/auth/workflow regression tests.
+- `npm.cmd run test:smoke`: PASS, all six HTTP checks.
+- Tests use isolated local MongoDB databases, not development seed data. Before/after SHA-256 inventories show only the central page/feed/navigation/tests/docs changed; existing services, API routers/controllers, models, package files and teammate-owned files are unchanged. No Git operations.
+- Actual visual checks at 360/768/1280 remain outstanding: browser inventory was empty and creating an in-app browser returned `Browser is not available: iab`. Client tests verify SVG widths/behavior, not real browser layout. No browser fixture server or development test accounts were created.
 
 ## Verified popularity/viewed/analytics backend run - 2026-09-19
 
@@ -51,6 +62,13 @@ Test fixtures are deliberately small and temporary; they are not the team's 500-
 - This is backend/index-plan verification, not a concurrent-reader load benchmark or final UI/browser test. See [analytics](analytics.md) for exact contracts and known pagination/resolution limits.
 
 ## Shared UI browser checks
+
+### View-insights UI checklist
+
+- Feed: select Popularity and each Reading status alongside search/category; inspect API parameters, load page two, change a filter and confirm paging restarts. All must omit viewed/browserId. Clear identity storage or block storage and confirm normal browsing remains usable. With no secure identity, selecting Viewed must visibly revert to All.
+- Editor `/analytics`: no automatic article selection; title search and Load more use the public API. Select an article; change 7/30/90-day presets. Check totals, returned interval and marker lines/list. A missing bucket means zero, not interpolation across a gap. Select zero-view data and a period with no markers. Simulate failed requests/session expiry and use visible retry.
+- At 360, 768 and 1280 CSS pixels: feed and analytics controls wrap, title/ID/timestamps break safely, no horizontal page overflow, chart ticks/legend remain readable. Keyboard navigation and the expandable text-data alternative should work.
+- Current execution environment has no connected browser and its in-app browser reports unavailable. DOM/fetch tests verify behavior and SVG resize calculations, not actual viewport layout. Visual verification at these widths remains a manual acceptance check; do not label it passed based on unit tests alone.
 
 Use local test accounts, never real credentials in screenshots or logs. The Node HTTP tests check server responses; they do not execute browser JavaScript. Verify these separately in a browser:
 

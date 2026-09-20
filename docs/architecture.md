@@ -14,6 +14,8 @@ GET /articles/:id -> indexRoutes -> loadSession -> requireDatabase -> homeContro
 Home feed.js -> GET /api/articles?q=&category=&sort=&cursor= -> existing Article route/controller/query -> JSON cards
 GET /reporter/* -> reporterPageRoutes -> loadSession -> requireRole(reporter) -> reporterPageController -> EJS scaffold
 GET /editor/* -> editorPageRoutes -> loadSession -> requireRole(editor) -> editorPageController -> EJS scaffold
+GET /analytics -> analyticsPageRoutes -> loadSession -> requireRole(editor) -> analyticsPageController -> analytics/index.ejs
+analytics.js -> existing public Article list (selection) + protected ViewStat analytics API -> SVG and text
 Errors -> errorHandler -> JSON for /api, EJS for page requests
 ```
 
@@ -50,7 +52,7 @@ After JSON/static handling, `/api` requests pass through `loadSession` in `app.j
 
 Public popularity/viewed queries reuse that service: Article public filter and approved-only projection -> indexed ViewStat lookup -> existence filtering and/or lifetime sum -> deterministic score/date plus ID ordering -> 20-card DTO page. Ordinary date queries keep the original find path. No Article counter, new collection or browser-side filtering of loaded cards is needed.
 
-Editor analytics follows `/api/view-stats/articles/:id/analytics` -> existing session/role/database guards -> `viewStatController.analytics` -> `viewStatService.getAnalytics` -> Article history and ViewStat aggregation -> safe JSON. The service also checks the Editor role. It returns lifetime/period totals, hourly series and real approval markers, never article content or browser IDs. See [analytics](analytics.md) for the query contract and limits. The final feed controls and graph remain deferred.
+Editor analytics follows `/api/view-stats/articles/:id/analytics` -> existing session/role/database guards -> `viewStatController.analytics` -> `viewStatService.getAnalytics` -> Article history and ViewStat aggregation -> safe JSON. The service also checks the Editor role. It returns lifetime/period totals, hourly series and real approval markers, never article content or browser IDs. The central `/analytics` page now consumes it; this UI added no aggregation or model changes. See [analytics](analytics.md) for the query contract and limits.
 
 `articleWorkflowService` validates action-specific inputs and performs status-guarded, single-document updates. Approval sets the public snapshot and pushes history in the same atomic operation. There are no transactions, revision counters or simultaneous-edit guarantees. Future clients must serialize saves and finish saving before submitting.
 
@@ -58,11 +60,15 @@ Dates, ownership and workflow status cannot be supplied through general content 
 
 ## Frontend integration boundary
 
+The feed's new Popularity and All/Viewed/Unviewed controls reuse existing public query parameters. BrowserIdentity is loaded before the feed; identity/filter changes reset pagination, and identity failure falls back to All. All ordering/filtering remains server-side.
+
+The central Analytics page has its own page router/controller/EJS/JS/CSS, outside teammate Editor directories. Existing session and Editor guards protect the HTML, and the existing API independently guards its data. Its public-article picker uses title search and cursor batches of 20. Range presets request 7/30/90 days on UTC-hour boundaries. Vanilla JS renders counts, a responsive SVG hourly line and supplied-only approval markers, plus text alternatives. Shared navigation links to it only for Editors. See [analytics UI details](analytics.md#central-editor-page-analytics).
+
 `/` renders the news-feed controls and shared header/navigation/footer. `feed.js` loads the first 20 public cards through the existing API. Search is debounced 300 ms; category/date sorting reset the cursor and results. An AbortController plus a request sequence number ignores stale responses (this is client request bookkeeping, not Article revision concurrency). Only one pagination request runs at a time. IntersectionObserver requests the next batch near the bottom; an explicit Load more button also works without it. IDs are deduplicated; errors preserve loaded cards and offer a manual retry of the same page, without an automatic retry loop. Empty/loading/end states are announced. All text uses textContent, never raw HTML.
 
 `GET /login` still renders a form for guests or redirects authenticated users to `/`. `login.js` sends JSON to the existing auth API and returns home on success. `main.js` refreshes the session display and handles Logout. The cookie stays HttpOnly; browser role display is not authorization.
 
-`GET /articles/:id` renders the complete approved body in its initial HTML using `articleQueryService.getPublic`, with no internal HTTP request. `article.ejs` uses escaped EJS `<%=` and preserves plain-text line breaks through CSS. Title, category, first publication date, reporter, summary and main image accompany the body. It remains readable without JavaScript. Private content never reaches these templates. Comments, viewed state, popularity, analytics and Weather UI remain unimplemented.
+`GET /articles/:id` renders the complete approved body in its initial HTML using `articleQueryService.getPublic`, with no internal HTTP request. `article.ejs` uses escaped EJS `<%=` and preserves plain-text line breaks through CSS. Title, category, first publication date, reporter, summary and main image accompany the body. It remains readable without JavaScript. Private content never reaches these templates. Comments and Weather UI remain unimplemented.
 
 After HTML parsing, `browser-identity.js` provides a same-origin localStorage UUID and `article.js` sends one anonymous POST to `/api/view-stats`. The route/database guard/controller/service validates inputs and calls `articleQueryService.requirePublicArticle` (exists-only, shared public filter). ViewStat atomically increments an article/browser/hour bucket. Article has no per-view array, auth tokens are not reused, and tracking failure never changes the page. This is best-effort client-reported counting, not unique-reader or abuse-proof analytics. See [view tracking](view-tracking.md) for initialization, growth and cleanup boundaries.
 

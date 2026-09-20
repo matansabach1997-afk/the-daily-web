@@ -49,8 +49,8 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 - Safe MongoDB-backed public list/detail APIs, approved-title text search, category filtering, newest/oldest sorting and 20-card cursor pagination.
 - Public feed with debounced search, infinite scroll, retry/load-more fallback and page-scoped responsive CSS.
 - Public `/articles/:id` EJS page with the complete approved article in its initial HTML, readable without JavaScript.
-- Anonymous browser UUID helper and best-effort public article view recording into atomic article/browser/hour ViewStat counters; no analytics UI yet.
-- Public popularity sorting and browser viewed/unviewed filtering, plus an Editor-only hourly analytics API with actual publication/update markers; see [analytics backend](docs/analytics.md).
+- Anonymous browser UUID helper and best-effort public article view recording into atomic article/browser/hour ViewStat counters.
+- Public popularity/viewed controls and a separate Editor-only `/analytics` page with public title selection, 7/30/90-day ranges, an hourly SVG chart and actual publication/update markers; see [analytics](docs/analytics.md).
 - Shared validation, controlled API errors, request IDs and sanitized operational logs.
 - Shared EJS header/navigation/footer, base styling and browser Login/Logout using the existing auth APIs.
 - Role-protected Reporter/Editor page scaffolds and empty, pre-mounted Comments/Weather API routers; see [A/B/C/D ownership](docs/team-task-boundaries.md).
@@ -58,7 +58,7 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 
 `publishedAt` always means **first publication**. Each approval appends its timestamp to `publicationHistory`. A pending/returned/draft revision never hides or replaces the previous public content.
 
-Not implemented here: Reporter/autosave UI, viewed/popularity controls, Editor UI, Comments/UI, trusted server BrowserIdentity/Guest limiting, ReadReceipt, analytics graph, ViewStat management Update/Delete APIs, Weather/UI or large seed. Client-reported view counting is implemented; it is not an abuse-proof or unique-reader metric. The new query/analytics backend needs no additional schema/index migration or dependency.
+Not implemented here: Reporter/autosave UI, Editor review UI, Comments/UI, trusted server BrowserIdentity/Guest limiting, ReadReceipt, ViewStat management Update/Delete APIs, Weather/UI or large seed. Client-reported view counting is implemented; it is not an abuse-proof or unique-reader metric. The central insights UI requires no additional dependency, schema/index migration or backend API change.
 
 After updating, run `npm.cmd run db:indexes` before recording views: ViewStat requires its unique bucket index. The helper stores only `daily_web_browser_id` in localStorage, independently of authentication. Clearing storage changes the identity; blocked storage falls back to a document-only ID. See [view tracking](docs/view-tracking.md) for API, view semantics, initialization and lifecycle limitations.
 
@@ -66,7 +66,7 @@ After updating, run `npm.cmd run db:indexes` before recording views: ViewStat re
 
 After updating, rerun `npm.cmd run db:indexes` to add the approved-title text and public category/date indexes. No dependency change or data migration is required. The homepage loads up to 20 approved articles at a time. Search matches whole words in approved titles (quotes for phrases), not partial words; category and publication-date sorting run on the server. Later approved updates do not move the original publication date. See the [exact query contract](docs/api-contract.md#public-feed-query-contract).
 
-The feed needs JavaScript; full article pages do not. Existing approved content remains visible while its working revision is draft/pending/returned. Comments, weather, popularity and viewed-state controls are intentionally absent. For focused checks run `node --test tests/publicArticles.test.js tests/publicNews.test.js tests/feedClient.test.js`. See [public news verification](docs/public-news.md) for browser checks and boundaries.
+The feed needs JavaScript; full article pages do not. Existing approved content remains visible while its working revision is draft/pending/returned. Popularity and All/Viewed/Unviewed controls use server queries; unavailable browser identity falls back to All. Comments and weather remain absent. For focused checks run `node --test tests/publicArticles.test.js tests/publicNews.test.js tests/feedClient.test.js tests/analyticsPage.test.js tests/analyticsClient.test.js`. See [public news verification](docs/public-news.md) for browser checks and boundaries.
 
 ## Shared UI foundation
 
