@@ -17,6 +17,7 @@ const editorPageRoutes = require("./routes/editorPageRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const weatherRoutes = require("./routes/weatherRoutes");
 const viewStatRoutes = require("./routes/viewStatRoutes");
+const analyticsPageRoutes = require("./routes/analyticsPageRoutes");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
@@ -37,6 +38,7 @@ app.get("/health", (req, res) => {
 app.use("/", indexRoutes);
 app.use("/reporter", reporterPageRoutes);
 app.use("/editor", editorPageRoutes);
+app.use("/analytics", analyticsPageRoutes);
 app.use("/api", loadSession);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

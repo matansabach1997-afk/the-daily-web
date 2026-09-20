@@ -3,6 +3,8 @@
   const search = document.getElementById("feed-search");
   const category = document.getElementById("feed-category");
   const sort = document.getElementById("feed-sort");
+  const viewed = document.getElementById("feed-viewed");
+  const identityStatus = document.getElementById("feed-identity-status");
   const results = document.getElementById("feed-results");
   const status = document.getElementById("feed-status");
   const more = document.getElementById("feed-more");
@@ -15,6 +17,7 @@
   let requestNumber = 0;
   let controller;
   let debounce;
+  let activeBrowserId = null;
   const seen = new Set();
 
   function element(tag, text, className) {
@@ -62,6 +65,17 @@
 
   async function loadMore() {
     if (loading || waiting || !hasMore) return;
+    let browserId = null;
+    if (viewed.value) {
+      try { browserId = window.DailyWebBrowserIdentity?.getBrowserId() || null; } catch { /* Fall back to All. */ }
+    }
+    // Storage may have been cleared in another tab. Never mix identities across pages.
+    if (cursor && browserId !== activeBrowserId) { reset(); return; }
+    activeBrowserId = browserId;
+    if (viewed.value && !browserId) {
+      viewed.value = "";
+      identityStatus.textContent = "Reading status is unavailable in this browser. Showing All articles instead.";
+    }
     loading = true;
     failed = false;
     const currentRequest = ++requestNumber;
@@ -71,6 +85,10 @@
     const params = new URLSearchParams({ sort: sort.value });
     if (search.value.trim()) params.set("q", search.value.trim());
     if (category.value) params.set("category", category.value);
+    if (viewed.value && browserId) {
+      params.set("viewed", viewed.value);
+      params.set("browserId", browserId);
+    }
     if (cursor) params.set("cursor", cursor);
     try {
       const response = await fetch(`/api/articles?${params}`, { signal: controller.signal });
@@ -114,6 +132,7 @@
     loading = false;
     waiting = true;
     seen.clear();
+    identityStatus.textContent = "";
     results.replaceChildren();
     status.textContent = "Searching...";
     observer?.unobserve(sentinel);
@@ -128,6 +147,7 @@
   search.addEventListener("input", () => reset(300));
   category.addEventListener("change", () => reset());
   sort.addEventListener("change", () => reset());
+  viewed.addEventListener("change", () => reset());
   more.addEventListener("click", loadMore);
   loadMore();
 })();

@@ -19,19 +19,31 @@
           </select>
         </div>
         <div>
-          <label for="feed-sort">Publication date</label>
+          <label for="feed-sort">Sort by</label>
           <select id="feed-sort" name="sort">
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
+            <option value="popularity">Popularity</option>
+          </select>
+        </div>
+        <div>
+          <label for="feed-viewed">Reading status</label>
+          <select id="feed-viewed" name="viewed" aria-describedby="viewed-help">
+            <option value="">All</option>
+            <option value="true">Viewed</option>
+            <option value="false">Unviewed</option>
           </select>
         </div>
         <button type="submit">Search</button>
       </form>
+      <p id="viewed-help">Reading status uses recorded visits from this browser, not your account. If storage is blocked, history will not carry across pages.</p>
+      <p id="feed-identity-status" class="feedback" role="status" aria-live="polite"></p>
       <noscript><p>Enable JavaScript to search and load the news feed. Individual article pages can be read without JavaScript.</p></noscript>
       <section id="feed-results" class="feed-results" aria-label="Articles" aria-busy="false"></section>
       <p id="feed-status" role="status" aria-live="polite">Loading articles...</p>
       <button id="feed-more" type="button" hidden>Load more</button>
       <div id="feed-sentinel" aria-hidden="true"></div>
     </main>
+    <script src="/js/browser-identity.js" defer></script>
     <script src="/js/feed.js" defer></script>
 <%- include("partials/footer") %>

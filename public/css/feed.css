@@ -41,6 +41,7 @@
 .news-card p { margin-block: 0.5rem; }
 .news-card .card-byline { color: #475569; font-size: 0.875rem; }
 #feed-status { overflow-wrap: anywhere; }
+#viewed-help { color: #475569; font-size: 0.875rem; }
 #feed-sentinel { height: 1px; margin-bottom: 2rem; }
 @media (max-width: 900px) { .news-card { flex-basis: calc((100% - 1.5rem) / 2); } }
 @media (max-width: 540px) {
