@@ -1,0 +1,57 @@
+<%- include("../partials/header") %>
+    <main id="main-content" class="shell analytics-page">
+      <p class="eyebrow">Editor insights</p>
+      <h1>Article analytics</h1>
+      <p>Explore recorded views alongside publication and approved updates.</p>
+      <noscript><p>Enable JavaScript to select an article and load analytics.</p></noscript>
+      <section class="analytics-panel" aria-labelledby="picker-heading">
+        <h2 id="picker-heading">1. Choose a public article</h2>
+        <p>Only approved public titles are listed, including articles with a revision in progress.</p>
+        <form id="analytics-search-form" class="analytics-controls" role="search">
+          <div>
+            <label for="analytics-search">Search approved titles</label>
+            <input id="analytics-search" type="search" maxlength="100" placeholder="Whole words or quoted phrase">
+          </div>
+          <button type="submit">Search articles</button>
+        </form>
+        <p id="analytics-list-status" role="status" aria-live="polite">Loading articles...</p>
+        <ul id="analytics-articles" class="analytics-articles" aria-label="Public article choices" aria-busy="false"></ul>
+        <button id="analytics-more" type="button" hidden>Load more articles</button>
+      </section>
+      <section class="analytics-panel" aria-labelledby="report-heading">
+        <h2 id="report-heading">2. Explore views over time</h2>
+        <p id="analytics-selected">No article selected.</p>
+        <div class="analytics-controls">
+          <div>
+            <label for="analytics-range">Date range</label>
+            <select id="analytics-range">
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+          </div>
+          <button id="analytics-refresh" type="button" disabled>Refresh analytics</button>
+        </div>
+        <p id="analytics-status" role="status" aria-live="polite">Select an article to view its analytics.</p>
+        <div id="analytics-report" hidden aria-busy="false">
+          <dl class="analytics-totals">
+            <div><dt>Total Views</dt><dd id="analytics-total">0</dd></div>
+            <div><dt>Period Views</dt><dd id="analytics-period-total">0</dd></div>
+          </dl>
+          <p id="analytics-period"></p>
+          <figure class="analytics-figure">
+            <div id="analytics-chart"></div>
+            <figcaption>Hourly recorded views (UTC). Missing hours mean zero. The current hour may be incomplete. Markers show actual approvals, not editing activity.</figcaption>
+          </figure>
+          <h3>Publication and update markers</h3>
+          <p>First publication: solid green line. Approved update: dashed purple line. Exact times are listed below; a single hour cannot separate views before and after an update within that hour.</p>
+          <ul id="analytics-markers"></ul>
+          <details>
+            <summary>Recorded hourly data (text alternative)</summary>
+            <ul id="analytics-data"></ul>
+          </details>
+        </div>
+      </section>
+    </main>
+    <script src="/js/analytics.js" defer></script>
+<%- include("../partials/footer") %>

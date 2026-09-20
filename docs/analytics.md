@@ -1,6 +1,6 @@
-# Popularity, viewed state and analytics backend
+# Popularity, viewed state and analytics
 
-This central backend extends the existing Article query and ViewStat service. It adds no model, stored Article counter, dependency or UI. Recording semantics remain in [view tracking](view-tracking.md).
+The central backend extends the existing Article query and ViewStat service; the central UI now consumes those contracts without changing aggregation, schemas or dependencies. Recording semantics remain in [view tracking](view-tracking.md).
 
 ## Definitions and public API
 
@@ -44,7 +44,7 @@ Response shape (illustrative values):
 - totalViews is lifetime; periodViews sums just the requested period. No statistics returns zero totals and an empty series.
 - Bounds are canonical UTC ISO timestamps including milliseconds, on whole-hour boundaries. Interval is `[from,to)`: from included, to excluded. It must be positive and at most 90 days (2,160 hourly points).
 - Default to is the next UTC-hour boundary, including the current partial hour. Default from is 30 days before to. Either bound can be supplied independently, subject to validation.
-- Series combines all browser buckets per hour, sorts oldest first and is sparse: absent hours mean zero. The future graph may fill zeros; the backend does not invent individual visits.
+- Series combines all browser buckets per hour, sorts oldest first and is sparse: absent hours mean zero. The SVG graph fills those missing hours with zero; neither layer invents individual visits.
 - Markers come only from actual publicationHistory entries within the period. Array entry zero is publication; subsequent entries are updates, even if the first entry lies outside the requested period. No marker is inferred from updatedAt, Start Revision or autosave. publishedAt remains the first publication date and may be null.
 - Hourly aggregation cannot distinguish visits before/after an update within the same hour. Markers retain their exact approval times; graph comparisons must respect this resolution.
 
@@ -70,6 +70,22 @@ Existing hard deletion/recording behavior is unchanged. Historical orphan bucket
 
 ## Handoff and checks
 
-No feed controls, graph, Reporter/Editor/Comments/Weather/Seed-owned files changed. Future central UI integration can use the current browser helper, new query parameters and Editor endpoint. ViewStat management Update/Delete operations remain deferred; this task does not claim complete statistics CRUD.
+The feed now exposes Popularity and All/Viewed/Unviewed. `browser-identity.js` loads before `feed.js`; only Viewed/Unviewed requests need the helper's ID. All omits both identity/filter parameters. Identity failure visibly resets to All without stopping browsing; blocked storage uses the existing document-only fallback. This is not cross-page history when storage is blocked, nor account/cross-device history. There is no separate client-side read list. Changing filters or identity resets pagination; the server remains responsible for filtering and sorting.
+
+### Central Editor page: `/analytics`
+
+- New files: `routes/analyticsPageRoutes.js`, `controllers/analyticsPageController.js`, `views/analytics/index.ejs`, `public/js/analytics.js`, `public/css/analytics.css`. `app.js` mounts the separate page router; nothing lives in teammate-owned Editor directories.
+- `loadSession` and `requireRole("editor")` protect the page before rendering: Guest 401, Reporter 403, Editor 200. Existing JSON analytics authorization is unchanged. The shared navigation and session refresh show Analytics only for Editor. Hiding the link is not authorization.
+- The EJS page is a shared-shell/controls template with no article data. JavaScript obtains only public cards from `GET /api/articles?sort=newest`, with optional approved-title search and existing cursor paging. Each request loads at most 20 choices; Load more is explicit and deduplicates. No all-article download, private workspace read or new selection API. The UI lists approved articles only, including published articles whose revision is pending/draft/returned. Never-published drafts are intentionally not selectable here even though the Editor API can inspect them.
+- Selecting a title calls the existing analytics endpoint with that article's ID. The selected title/ID remains visible. Search affects the choice list, not the already-selected report. Text comes through textContent, not raw HTML. No view is recorded by selecting an article in Analytics.
+- Last 7/30/90 days: compute `to` as the next UTC-hour boundary, `from` exactly N days earlier, then send canonical ISO timestamps. The current partial hour is included; never request more than 90 days. Show the actual returned interval, lifetime Total Views and Period Views. Range change and Refresh use Ajax.
+- Empty article list, no selected article, loading, zero views, API/network errors and success have visible status messages. Failed requests offer manual retry. Article/range changes cancel earlier requests and ignore late responses, hiding old report data while loading or on failure. Session expiry is reported with a prompt to log in again; server checks remain authoritative.
+- The chart is native SVG created with Vanilla JS. Its viewBox follows the measured container width, redrawing on resize. It plots each hourly value at the hour midpoint, filling sparse missing hours with zero (at most 2,160 points). A minimum Y maximum of one avoids zero-division; integer Y ticks and three UTC date/time labels keep the graph readable. A blue line represents views, solid green lines mark first publication, dashed purple lines mark approved updates. No chart dependency or backend calculation was added.
+- Markers use only `publicationMarkers` returned by the API, at their actual timestamps. No marker is inferred from publishedAt or any other date. SVG titles and a visible list supply exact UTC times, including seconds/milliseconds; overlapping markers can be distinguished in the list. SVG title/description, live statuses, keyboard-operable buttons and an expandable recorded-hour text list provide accessible alternatives.
+- Scoped Flexbox controls/cards wrap on small screens; chart width is fluid. Automated tests check resize math, but actual 360/768/1280 viewport rendering needs a connected browser (see testing notes).
+
+Reporter/Editor review/Comments/Weather/Seed-owned files remain untouched. ViewStat management Update/Delete, dependent cleanup, Comments/Weather UI and full demo data remain deferred; no full statistics CRUD completion is claimed.
 
 `tests/analytics.test.js` exercises real isolated MongoDB data: cross-browser/hour totals, zero-view articles, all filter/sort combinations across pages, malformed inputs, missing identity fallback, permissions, exact markers, empty data, safe DTOs and lookup index plans. Run the full commands in [testing](testing.md).
+
+`analyticsPage.test.js` checks actual HTML authorization/navigation/assets. `analyticsClient.test.js` executes the real client with DOM/fetch doubles for selection, paging, ranges, stale requests, zero/low chart values, supplied-only markers and errors. `feedClient.test.js` additionally covers the new controls and the real identity helper's blocked-storage fallback.

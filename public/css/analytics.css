@@ -1,0 +1,33 @@
+.analytics-page { margin-block: 2rem; overflow-wrap: anywhere; }
+.analytics-page h1 { margin-bottom: 0; }
+.analytics-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; margin-block: 1.5rem; min-width: 0; }
+.analytics-panel h2 { margin-top: 0; }
+.analytics-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+.analytics-controls > div { flex: 1 1 220px; min-width: 0; }
+.analytics-controls label { margin-top: 0; }
+.analytics-controls button { margin-top: 0; }
+.analytics-controls select { width: 100%; font: inherit; padding: 0.6rem; border: 1px solid #64748b; border-radius: 0.3rem; background: #fff; }
+.analytics-controls select:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.analytics-articles { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.analytics-articles li { flex: 1 1 260px; min-width: 0; }
+.analytics-articles button { width: 100%; height: 100%; text-align: left; overflow-wrap: anywhere; background: #eff6ff; color: #1e3a8a; }
+.analytics-articles button[aria-pressed="true"] { background: #1d4ed8; color: #fff; }
+.analytics-totals { display: flex; flex-wrap: wrap; gap: 1rem; }
+.analytics-totals > div { flex: 1 1 150px; min-width: 0; padding: 1rem; background: #f1f5f9; border-radius: 0.5rem; }
+.analytics-totals dt { color: #475569; }
+.analytics-totals dd { font-size: 2rem; font-weight: 700; margin: 0; }
+.analytics-figure { margin: 1rem 0; }
+#analytics-chart { width: 100%; min-width: 0; }
+#analytics-chart svg { display: block; width: 100%; height: auto; }
+.analytics-grid { stroke: #cbd5e1; }
+.analytics-axis-label { fill: #334155; font: 12px system-ui, sans-serif; }
+.analytics-line { fill: none; stroke: #1d4ed8; stroke-width: 2; }
+.analytics-marker { stroke-width: 2; }
+.analytics-marker.publication { stroke: #047857; }
+.analytics-marker.update { stroke: #7e22ce; stroke-dasharray: 5 4; }
+.analytics-figure figcaption, #analytics-period { color: #475569; font-size: 0.875rem; }
+#analytics-data { max-height: 16rem; overflow-y: auto; padding-left: 1.5rem; }
+@media (max-width: 540px) {
+  .analytics-panel { padding: 0.75rem; }
+  .analytics-controls > div, .analytics-controls button { flex-basis: 100%; width: 100%; }
+}

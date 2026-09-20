@@ -3,6 +3,7 @@ document.documentElement.classList.add("js-enabled");
 const loginLink = document.getElementById("login-link");
 const reporterWorkspaceLink = document.getElementById("reporter-workspace-link");
 const editorWorkspaceLink = document.getElementById("editor-workspace-link");
+const analyticsLink = document.getElementById("analytics-link");
 const accountControls = document.getElementById("account-controls");
 const currentUserLabel = document.getElementById("current-user");
 const logoutButton = document.getElementById("logout-button");
@@ -16,6 +17,7 @@ async function refreshSession() {
     loginLink.hidden = Boolean(data.user);
     reporterWorkspaceLink.hidden = data.user?.role !== "reporter";
     editorWorkspaceLink.hidden = data.user?.role !== "editor";
+    analyticsLink.hidden = data.user?.role !== "editor";
     accountControls.hidden = !data.user;
     currentUserLabel.textContent = data.user ? `${data.user.username} (${data.user.role})` : "";
     sessionMessage.textContent = "";

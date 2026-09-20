@@ -96,6 +96,7 @@ Run the existing `npm.cmd run db:indexes` after updating: the Article model adds
 | GET `/` | 200 public news feed shell with filters; browser requests first 20 cards from the public API |
 | GET `/articles/:id` | 200 EJS with complete approved article in initial HTML; 404 absent/unpublished, 400 invalid ID/query, 503 DB unavailable |
 | GET `/login` | 200 HTML login form for guests; 302 to `/` for authenticated users |
+| GET `/analytics` | Editor-only central analytics shell; Guest 401 HTML, Reporter 403 HTML; client selects from existing public cards and loads the existing analytics API |
 | GET `/reporter` | 200 Reporter Workspace scaffold; Reporter only |
 | GET `/reporter/edit/:id` | 200 Reporter edit scaffold; Reporter only; validates ID format, no article read/write yet |
 | GET `/editor` | 200 Editor Workspace scaffold; Editor only |
@@ -121,7 +122,9 @@ The public article page calls the same `getPublic` service as the JSON detail AP
 | --- | --- | --- | --- | --- |
 | GET `/api/view-stats/articles/:id/analytics` | Editor only | optional `from`, `to`: canonical UTC ISO hour boundaries including milliseconds | 200 `{data:{articleId,publishedAt,totalViews,period:{from,to,interval:"hour"},periodViews,series:[{bucketStart,views}],publicationMarkers:[{at,type}]}}` | 400 ID/period/query, 401 Guest, 403 Reporter, 404 missing Article, 503 DB |
 
-totalViews covers all recorded time; series/periodViews cover `[from,to)`, combining all browsers per hour. Default: last 30 days through the next hour boundary; maximum 90 days. Missing hours mean zero. Markers come only from publicationHistory (`publication` for the first entry, `update` afterwards) within that window. Editors may inspect any existing article; no content or browser identities are returned. See [analytics](analytics.md) for exact bounds, examples, indexes and pagination limitations. No final analytics/feed-controls UI is implemented.
+totalViews covers all recorded time; series/periodViews cover `[from,to)`, combining all browsers per hour. Default: last 30 days through the next hour boundary; maximum 90 days. Missing hours mean zero. Markers come only from publicationHistory (`publication` for the first entry, `update` afterwards) within that window. Editors may inspect any existing article; no content or browser identities are returned. See [analytics](analytics.md) for exact bounds, examples, indexes and pagination limitations.
+
+The central `/analytics` page consumes this unchanged API using 7/30/90-day presets, a responsive SVG and exact returned marker times. It selects approved titles through the existing public list/search/cursor API, not workspace reads. Feed controls now send popularity/viewed parameters; All omits viewed/browserId. The identity helper loads before the feed, and identity failure falls back visibly to All. No JSON API changes were needed for this UI layer.
 
 Login uses the existing POST auth route; Logout uses the existing DELETE session route. Both require browser JavaScript and redirect home on success. Navigation refreshes through the existing GET session API and displays only the matching role's workspace link. No authentication endpoints, existing JSON contracts or role redirects changed. Workspace pages load `/css/reporter.css` or `/css/editor.css` and their own scripts under `/js/reporter/` or `/js/editor/`; the scripts contain no feature behavior yet.
 

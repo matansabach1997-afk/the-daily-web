@@ -6,7 +6,7 @@ const vm = require("node:vm");
 
 // A small DOM/fetch double runs the real browser script without an extra package.
 // These are behavior tests, not a substitute for visual browser checks.
-function browser({ infiniteScroll = true } = {}) {
+function browser({ infiniteScroll = true, getBrowserId = () => "12345678-1234-4123-8123-123456789abc", blockedStorage = false } = {}) {
   function element(tag = "div") {
     return {
       tag, children: [], listeners: {}, dataset: {}, attributes: {}, value: "", textContent: "",
@@ -17,7 +17,7 @@ function browser({ infiniteScroll = true } = {}) {
       emit(name) { this.listeners[name]({ preventDefault() {} }); },
     };
   }
-  const ids = ["feed-filters", "feed-search", "feed-category", "feed-sort", "feed-results", "feed-status", "feed-more", "feed-sentinel"];
+  const ids = ["feed-filters", "feed-search", "feed-category", "feed-sort", "feed-viewed", "feed-identity-status", "feed-results", "feed-status", "feed-more", "feed-sentinel"];
   const nodes = Object.fromEntries(ids.map((id) => [id, element()]));
   nodes["feed-sort"].value = "newest";
   const requests = [], timers = new Map();
@@ -29,6 +29,7 @@ function browser({ infiniteScroll = true } = {}) {
     approachBottom() { if (this.observing) this.callback([{ isIntersecting: true }]); }
   }
   const window = infiniteScroll ? { IntersectionObserver: Observer } : {};
+  window.DailyWebBrowserIdentity = { getBrowserId };
   const context = {
     document: { getElementById: (id) => nodes[id], createElement: element },
     window, IntersectionObserver: Observer, URLSearchParams, AbortController,
@@ -38,6 +39,11 @@ function browser({ infiniteScroll = true } = {}) {
       return new Promise((resolve, reject) => requests.push({ url, options, resolve, reject }));
     },
   };
+  if (blockedStorage) {
+    window.localStorage = { getItem() { throw new Error("Storage blocked"); } };
+    window.crypto = { randomUUID: getBrowserId };
+    vm.runInNewContext(readFileSync(path.join(__dirname, "../public/js/browser-identity.js"), "utf8"), context);
+  }
   vm.runInNewContext(readFileSync(path.join(__dirname, "../public/js/feed.js"), "utf8"), context);
   return {
     nodes, requests, observer,
@@ -133,4 +139,76 @@ test("load-more fallback works without IntersectionObserver and empty results ar
   await client.reply(2, []);
   assert.match(client.nodes["feed-status"].textContent, /No articles match/);
   assert.equal(client.nodes["feed-more"].hidden, true);
+});
+
+test("popularity and viewed filters compose with search/category and reset page cursors", async () => {
+  const client = browser();
+  await client.reply(0, [article(1)], "old-cursor");
+  client.nodes["feed-search"].value = "telescope";
+  client.nodes["feed-category"].value = "science";
+  client.nodes["feed-sort"].value = "popularity";
+  client.nodes["feed-sort"].emit("change");
+  client.runDebounce();
+  let params = new URL(client.requests[1].url, "http://local").searchParams;
+  assert.equal(params.get("sort"), "popularity");
+  assert.equal(params.get("q"), "telescope");
+  assert.equal(params.get("category"), "science");
+  assert.equal(params.has("cursor"), false);
+  assert.equal(params.has("browserId"), false);
+  await client.reply(1, [article(2)], "popular-next");
+  for (const [index, viewed] of [[2, "true"], [3, "false"], [4, ""]]) {
+    client.nodes["feed-viewed"].value = viewed;
+    client.nodes["feed-viewed"].emit("change");
+    client.runDebounce();
+    params = new URL(client.requests[index].url, "http://local").searchParams;
+    assert.equal(params.get("viewed"), viewed || null);
+    assert.equal(params.get("browserId"), viewed ? "12345678-1234-4123-8123-123456789abc" : null);
+    assert.equal(params.has("cursor"), false);
+    assert.equal(params.get("sort"), "popularity");
+    assert.equal(params.get("q"), "telescope");
+    assert.equal(params.get("category"), "science");
+    assert.equal(client.nodes["feed-results"].children.length, 0);
+    await client.reply(index, [article(index)], "next");
+  }
+});
+
+test("identity failure falls back to All; a document-only identity still permits filtering", async () => {
+  for (const getBrowserId of [() => null, () => { throw new Error("Identity unavailable"); }]) {
+    const client = browser({ getBrowserId });
+    await client.reply(0, []);
+    client.nodes["feed-viewed"].value = "true";
+    client.nodes["feed-viewed"].emit("change");
+    client.runDebounce();
+    assert.equal(client.nodes["feed-viewed"].value, "");
+    assert.ok(!client.requests[1].url.includes("viewed="));
+    assert.match(client.nodes["feed-identity-status"].textContent, /Showing All/);
+    await client.reply(1, [article(1)]);
+    assert.equal(client.nodes["feed-results"].children.length, 1);
+  }
+  const client = browser({ blockedStorage: true }); // Runs the actual helper's in-memory fallback.
+  client.nodes["feed-viewed"].value = "false";
+  client.nodes["feed-viewed"].emit("change");
+  client.runDebounce();
+  await client.reply(1, [article(1)], "next");
+  client.nodes["feed-more"].emit("click");
+  const params = new URL(client.requests[2].url, "http://local").searchParams;
+  assert.equal(params.get("viewed"), "false");
+  assert.equal(params.get("cursor"), "next");
+  assert.equal(params.get("browserId"), "12345678-1234-4123-8123-123456789abc");
+});
+
+test("identity changes never mix an old viewed cursor with a new browser ID", async () => {
+  let identity = "12345678-1234-4123-8123-123456789abc";
+  const client = browser({ getBrowserId: () => identity });
+  client.nodes["feed-viewed"].value = "true";
+  client.nodes["feed-viewed"].emit("change");
+  client.runDebounce();
+  await client.reply(1, [article(1)], "old-identity-cursor");
+  identity = "12345678-1234-4123-8123-123456789def";
+  client.nodes["feed-more"].emit("click");
+  client.runDebounce();
+  const params = new URL(client.requests[2].url, "http://local").searchParams;
+  assert.equal(params.has("cursor"), false);
+  assert.equal(params.get("browserId"), identity);
+  assert.equal(client.nodes["feed-results"].children.length, 0);
 });

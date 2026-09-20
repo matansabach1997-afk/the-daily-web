@@ -12,7 +12,9 @@ See [API contract](api-contract.md#public-feed-query-contract). Run `npm.cmd run
 
 ## Client behavior
 
-The backend also supports `sort=popularity` and `viewed=true|false` with a validated browserId, combined with the existing filters/cursors. Popularity sums recorded views; viewed checks any matching browser/article bucket. See [analytics](analytics.md) for definitions, indexes, costs and parameter examples. Current feed controls/scripts are unchanged; future central UI work must wire these capabilities and reset cursors when identity/filters change.
+The Sort by control now includes Newest first, Oldest first and Popularity. Reading status offers All, Viewed and Unviewed. These send `sort=popularity` and `viewed=true|false` to the existing API, composing with search/category/cursor. The browser never sorts popularity or filters only loaded cards. See [analytics](analytics.md) for server definitions and costs.
+
+`browser-identity.js` loads before `feed.js`. Viewed/Unviewed calls `DailyWebBrowserIdentity.getBrowserId()` and sends its ID; All sends neither browserId nor viewed. No separate read list is stored. Blocked storage keeps working through the helper's document-only fallback, but cannot retain history across pages; the UI explains this. Missing/throwing identity resets visibly to All and still loads the feed. A changed identity detected before loading another page resets the cursor/cards instead of mixing identities. All filter changes keep existing abort/stale-response/deduplication/error/end behavior.
 
 The initial feed request fetches 20 cards. Search changes debounce for 300 ms; filters/sort submit immediately. Reset clears the cursor, loaded IDs and cards, aborts the old fetch and ignores late results. Pagination is serial; a Set prevents duplicate cards. IntersectionObserver triggers near the bottom (300px margin). Load more is a keyboard-accessible fallback. Failed pages preserve previous cards and cursor; only an explicit retry retries the failure. End/empty/error/loading feedback is visible and announced. There is no snapshot guarantee while editors publish/delete between requests.
 
@@ -41,4 +43,4 @@ The implementation session could not perform visual browser checks: no connected
 
 ## Deliberately deferred
 
-Comments UI, trusted server Guest identity/rate limiting, popularity/viewed controls, analytics graph, Weather UI and seed data remain deferred. BrowserIdentity, ViewStat recording, popularity/viewed query support and Editor analytics backend are implemented centrally. No Reporter/Editor/Comments/Weather/Seed-owned implementation is changed by these central features.
+Comments UI, trusted server Guest identity/rate limiting, Weather UI and seed data remain deferred. BrowserIdentity, ViewStat recording, popularity/viewed controls and the separate Editor `/analytics` page are implemented centrally. No Reporter/Editor/Comments/Weather/Seed-owned implementation is changed by these central features.

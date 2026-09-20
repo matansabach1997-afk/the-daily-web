@@ -115,7 +115,7 @@ The common header accepts an optional, server-chosen `pageStylesheet`; A/B contr
 - Public `views/article.ejs` and complete approved content in initial HTML are now implemented centrally.
 - Comments UI integration into the existing `article.ejs` remains future central work.
 - Client BrowserIdentity and ViewStat recording are now central implementations, including their files, tests and index registration.
-- Popularity/viewed public queries and Editor analytics aggregation are now central backend implementations; their final feed controls/graph remain central follow-up work. See [analytics](analytics.md).
+- Popularity/viewed public queries, feed controls and Editor analytics aggregation/SVG page are now central implementations. `/analytics` uses `analyticsPageRoutes.js`, `analyticsPageController.js`, `views/analytics/*`, `public/js/analytics.js` and `public/css/analytics.css`, not teammate Editor files. Existing shared navigation links there for Editors only. See [analytics](analytics.md).
 - Trusted Guest identity/comment limiting and ReadReceipt remain future work. Viewed filtering currently uses ViewStat existence per browser. The localStorage UUID is replaceable, not authentication or the sole comment limiter.
 - ViewStat management Update/Delete and dependent cleanup remain central future work; no duplicated Article counters are stored.
 - Weather widget/sidebar; full defense seed combining article/comment/statistics data.

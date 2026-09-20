@@ -2,7 +2,7 @@
 
 ## Scope and flow
 
-The recording layer tracks anonymous public-article views. The subsequent central [analytics backend](analytics.md) reuses these records for popularity, viewed/unviewed filtering and Editor analytics. No final graph/feed-controls UI, Comments, rate limiting, Weather or seed features are added. Teammate files and Article workflow/model semantics are unchanged.
+The recording layer tracks anonymous public-article views. The subsequent central [analytics layer](analytics.md) reuses these records for popularity, viewed/unviewed feed controls and an Editor SVG analytics page. Comments, rate limiting, Weather and seed features remain deferred. Teammate files and Article workflow/model semantics are unchanged.
 
 ```text
 GET /articles/:id -> existing public service -> complete article.ejs HTML
@@ -76,7 +76,7 @@ Requests for already-deleted articles fail the visibility check. References do n
 
 Implemented next: popularity is the sum of recorded views; viewed means a matching article/browser bucket exists; Editor analytics returns totals/hourly series and actual publicationHistory markers. These queries enforce public visibility or Editor permission; no new indexes or Article counters are needed. See [analytics](analytics.md).
 
-Deferred: trusted Guest identity/comment limit, ReadReceipt, viewed/popularity controls, analytics graph, protected ViewStat management Update/Delete compliance operations, retention/cleanup, Comments/Weather UI and demo seed. Recording plus aggregate reads do not claim full ViewStat CRUD completion.
+Deferred: trusted Guest identity/comment limit, ReadReceipt, protected ViewStat management Update/Delete compliance operations, retention/cleanup, Comments/Weather UI and demo seed. Recording plus aggregate reads do not claim full ViewStat CRUD completion. Feed controls and `/analytics` now consume the existing contracts without changing recording behavior.
 
 ## Tests
 
