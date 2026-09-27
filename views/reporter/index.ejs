@@ -1,7 +1,26 @@
 <%- include("../partials/header") %>
 <main id="main-content" class="container reporter-workspace">
-  <h1><%= title %></h1>
-  <p class="scaffold-notice">Reporter workspace scaffold. Article lists and writing tools are not implemented yet.</p>
+  <div class="reporter-heading-row">
+    <div>
+      <p class="eyebrow">Reporter</p>
+      <h1><%= title %></h1>
+      <p class="reporter-lead">Create drafts, continue returned stories, and follow articles through review.</p>
+    </div>
+    <button id="create-draft-button" type="button">Create draft</button>
+  </div>
+
+  <p id="reporter-feedback" class="reporter-feedback" role="status" aria-live="polite"></p>
+
+  <section aria-labelledby="your-articles-heading">
+    <div class="reporter-section-heading">
+      <h2 id="your-articles-heading">Your articles</h2>
+      <button id="refresh-articles-button" class="secondary-button" type="button">Refresh</button>
+    </div>
+
+    <div id="article-list" class="reporter-article-list" aria-live="polite"></div>
+    <p id="empty-articles" class="reporter-empty" hidden>You do not have any articles yet. Create a draft to get started.</p>
+    <button id="load-more-button" class="secondary-button reporter-load-more" type="button" hidden>Load more</button>
+  </section>
 </main>
 <script src="/js/reporter/index.js" defer></script>
 <%- include("../partials/footer") %>
