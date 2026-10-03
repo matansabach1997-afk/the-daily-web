@@ -1,8 +1,111 @@
 <%- include("../partials/header") %>
+
 <main id="main-content" class="container reporter-workspace" data-article-id="<%= articleId %>">
-  <h1><%= title %></h1>
-  <p class="scaffold-notice">Article editing scaffold. No article content has been loaded and no changes will be saved.</p>
-  <p><a href="/reporter">Back to Reporter Workspace</a></p>
+  <p><a href="/reporter">&larr; Back to Reporter Workspace</a></p>
+
+  <div class="reporter-heading-row reporter-editor-heading">
+    <div>
+      <p class="eyebrow">Reporter</p>
+      <h1><%= title %></h1>
+    </div>
+
+    <span
+      id="article-status"
+      class="status-badge"
+      data-status="draft"
+    >
+      Loading...
+    </span>
+  </div>
+
+  <p id="editor-note-panel" class="editor-note" hidden>
+    <strong>Editor note</strong>
+    <span id="editor-note-text"></span>
+  </p>
+
+  <p
+    id="save-feedback"
+    class="save-feedback"
+    role="status"
+    aria-live="polite"
+  >
+    Loading article...
+  </p>
+
+  <form id="article-form" class="reporter-editor" novalidate>
+    <label for="article-title">Title</label>
+    <input
+      id="article-title"
+      name="title"
+      type="text"
+      maxlength="200"
+      autocomplete="off"
+    >
+
+    <label for="article-summary">Summary</label>
+    <textarea
+      id="article-summary"
+      name="summary"
+      maxlength="500"
+      rows="4"
+    ></textarea>
+
+    <label for="article-body">Body</label>
+    <textarea
+      id="article-body"
+      name="body"
+      maxlength="50000"
+      rows="16"
+    ></textarea>
+
+    <label for="article-category">Category</label>
+    <select id="article-category" name="category">
+      <option value="">Choose a category</option>
+      <option value="technology">Technology</option>
+      <option value="science">Science</option>
+      <option value="culture">Culture</option>
+      <option value="sport">Sport</option>
+      <option value="local">Local</option>
+    </select>
+
+    <label for="article-image-url">Image URL</label>
+    <input
+      id="article-image-url"
+      name="imageUrl"
+      type="text"
+      maxlength="2048"
+      placeholder="https://example.com/image.jpg or /images/example.jpg"
+      autocomplete="off"
+    >
+
+    <div
+      id="field-errors"
+      class="field-errors"
+      role="alert"
+      aria-live="polite"
+    ></div>
+
+    <div class="reporter-actions">
+      <button id="save-button" type="button">
+        Save now
+      </button>
+
+      <button id="submit-button" type="button">
+        Submit for review
+      </button>
+
+      <button id="revision-button" type="button" hidden>
+        Start revision
+      </button>
+    </div>
+  </form>
+
+  <p class="autosave-note">
+    Draft and returned articles autosave after you stop typing.
+    Submission waits for the latest save to finish.
+  </p>
 </main>
+
 <script src="/js/reporter/edit.js" defer></script>
+
 <%- include("../partials/footer") %>
