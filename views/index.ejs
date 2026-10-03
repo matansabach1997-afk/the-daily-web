@@ -3,6 +3,19 @@
       <p class="eyebrow">The Daily Web</p>
       <h1>Latest news</h1>
       <p>Discover the stories that matter to you.</p>
+      <aside id="home-weather" class="home-weather" data-city="Tel Aviv" aria-labelledby="weather-heading" aria-busy="false">
+        <div>
+          <h2 id="weather-heading">Weather · Tel Aviv</h2>
+          <p id="weather-status" role="status" aria-live="polite">Loading weather...</p>
+          <div id="weather-details" hidden>
+            <p id="weather-summary"></p>
+            <p id="weather-meta"></p>
+            <p>Retrieved <time id="weather-time"></time> · OpenWeatherMap</p>
+          </div>
+          <noscript><p>Enable JavaScript for weather updates.</p></noscript>
+        </div>
+        <button id="weather-retry" type="button" hidden>Retry weather</button>
+      </aside>
       <form id="feed-filters" class="feed-filters" role="search">
         <div class="feed-search">
           <label for="feed-search">Search article titles</label>
@@ -46,4 +59,5 @@
     </main>
     <script src="/js/browser-identity.js" defer></script>
     <script src="/js/feed.js" defer></script>
+    <script src="/js/weather.js" defer></script>
 <%- include("partials/footer") %>

@@ -1,5 +1,12 @@
 .public-feed { margin-block: 2rem; }
 .public-feed h1 { margin-bottom: 0; }
+.home-weather { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; margin-block: 1rem; padding: 0.75rem 1rem; background: #eff6ff; border: 1px solid #dbeafe; border-radius: 0.5rem; font-size: 0.875rem; overflow-wrap: anywhere; }
+.home-weather > div { flex: 1 1 240px; min-width: 0; }
+.home-weather h2 { margin: 0; font-size: 1rem; }
+.home-weather p { margin: 0.2rem 0; }
+.home-weather button { flex: 0 1 auto; max-width: 100%; }
+#weather-status:empty { display: none; }
+#weather-meta, #weather-details p:last-child { color: #475569; }
 .feed-filters {
   display: flex;
   flex-wrap: wrap;

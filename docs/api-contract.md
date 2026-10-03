@@ -130,7 +130,13 @@ Login uses the existing POST auth route; Logout uses the existing DELETE session
 
 ## Merged feature routers
 
-The merged Comments and Weather routers are no longer empty placeholders. Both keep their existing mounts; no app.js changes are needed for this Comments integration. Weather is outside this task; see its feature notes. See [ownership boundaries](team-task-boundaries.md).
+The merged Comments and Weather routers retain their original mounts. Their central public UI integrations need no app.js changes. See [ownership boundaries](team-task-boundaries.md).
+
+## Weather (existing backend, now displayed on home)
+
+`GET /api/weather?city=Tel%20Aviv` is public and returns `{weather:{city,temperature,description,humidity,windSpeed,fetchedAt}}`, not the Article `{data:...}` envelope. Units: Celsius, humidity percent, wind m/s. Missing city: 400; missing `OPENWEATHER_API_KEY`: 503; provider/network failure: 502. Existing error envelopes/statuses are unchanged.
+
+The service calls OpenWeatherMap server-side and caches one successful city result for 15 minutes. The home widget calls only our Express endpoint, displays a loading/fallback state independently of the feed, and refreshes at the returned fetchedAt age limit. The server-only key has an empty `.env.example` placeholder; it must never reach HTML or browser JS. See [weather UI](weather-ui.md) for cache details, setup and manual checks.
 
 ## Comments: public reads and guest/authenticated creation
 

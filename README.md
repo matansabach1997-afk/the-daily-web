@@ -4,6 +4,8 @@ University news project using Node.js, Express, MongoDB/Mongoose, EJS and Vanill
 
 ## Local setup
 
+Optional home weather widget: set `OPENWEATHER_API_KEY` in your ignored local `.env` and restart. The empty `.env.example` placeholder is safe to share. Without a key, only the widget shows an unavailable message; the feed still works. The server fetches/caches OpenWeatherMap data for 15 minutes, and browser code calls only `/api/weather`. See [weather UI](docs/weather-ui.md).
+
 1. Use Node.js 24 and a running ordinary MongoDB server (no replica set required).
 2. Run `npm ci` to install the existing lockfile dependencies: Express, Mongoose and EJS only.
 3. Copy `.env.example` to `.env`. Keep it local and set `MONGODB_URI` for your development database. Never use the test database for development data.
