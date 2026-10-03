@@ -19,6 +19,10 @@ An official portable MongoDB ZIP is acceptable local test infrastructure: extrac
 
 ## Automated coverage
 
+Central Comments: `comments.test.js` covers existing authenticated CRUD plus guest creation/UUID validation/public visibility, global per-browser rolling limits, concurrency, quota expiry/persistence, DTO privacy and SSR form wiring. `commentsClient.test.js` runs the actual article script with DOM/fetch doubles for AJAX, text safety, stale responses, duplicate-submit prevention, retained drafts and visible validation/429/network feedback. Tracking behavior remains covered by `articleTracking.test.js`. See [Comments manual checks](comments.md#tests-and-boundaries).
+
+Verified central Comments run, 2026-10-03: syntax PASS (93 JavaScript files); unit PASS (12 tests); full `npm.cmd test` PASS (110 tests, zero failures/skips); smoke PASS (6 checks). MongoDB integration uses isolated local databases, not development seed data. SHA-256 inventories confirm auth/Article workflow, other teammate code and dependencies unchanged; no Git operations. Real-browser/mobile interaction and visual layout remain manual verification, not claimed by DOM doubles.
+
 | File | What it verifies |
 | --- | --- |
 | `runtime.test.js` | Import does not start/connect, original page/static/health/404, malformed/oversized bodies, safe 500, environment and test-URI safeguards |

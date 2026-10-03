@@ -13,6 +13,20 @@
         <% } %>
         <div class="article-body" dir="auto"><%= article.body %></div>
       </article>
+      <section class="article-comments" aria-labelledby="comments-heading">
+        <h2 id="comments-heading">Comments</h2>
+        <p id="comments-status" role="status" aria-live="polite">Loading comments...</p>
+        <button id="comments-reload" type="button" hidden>Refresh comments</button>
+        <ul id="comments-list" aria-label="Article comments" aria-busy="false"></ul>
+        <form id="comment-form">
+          <label for="comment-body">Add a comment</label>
+          <textarea id="comment-body" name="body" rows="4" maxlength="2000" required disabled aria-describedby="comment-help"></textarea>
+          <p id="comment-help">1–2000 characters. Guests may post up to 3 comments per minute across all articles, using this browser's identity. No login required.</p>
+          <button id="comment-submit" type="submit" disabled>Post comment</button>
+          <p id="comment-feedback" role="status" aria-live="polite"></p>
+        </form>
+        <noscript><p>Enable JavaScript to load and post comments. The full article remains readable above.</p></noscript>
+      </section>
     </main>
     <script src="/js/browser-identity.js" defer></script>
     <script src="/js/article.js" defer></script>

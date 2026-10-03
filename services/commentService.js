@@ -1,5 +1,6 @@
 const Comment = require("../models/Comment");
-const { allowedFields, text, id } = require("../utils/validation");
+const BrowserIdentity = require("../models/BrowserIdentity");
+const { allowedFields, text, id, browserId } = require("../utils/validation");
 const requireActor = require("../utils/authorization");
 const httpError = require("../utils/httpError");
 const articleQueryService = require("./articleQueryService");
@@ -43,18 +44,20 @@ async function getComment(commentId) {
 }
 
 async function createComment(actor, input) {
-    requireActor(actor);
-    allowedFields(input, ["articleId", "body"]);
+    if (actor) requireActor(actor);
+    allowedFields(input, ["articleId", "body", "browserId"]);
 
     const articleId = id(input.articleId);
-    await articleQueryService.getPublic(articleId);
-
     const body = text(input.body, "body", { min: 1, max: 2000 });
+    const identity = !actor || input.browserId !== undefined ? browserId(input.browserId) : null;
+    await articleQueryService.requirePublicArticle(articleId);
+    if (!actor) await reserveGuestComment(identity);
 
     const comment = await Comment.create({
         article: articleId,
         body,
-        author: actor._id,
+        author: actor ? actor._id : null,
+        browserId: actor ? null : identity,
     });
 
     const saved = await Comment.findById(comment._id)
@@ -62,6 +65,33 @@ async function createComment(actor, input) {
         .lean();
 
     return commentDto(saved);
+}
+
+async function reserveGuestComment(identity) {
+    const now = new Date();
+    const minuteAgo = new Date(now.getTime() - 60000);
+    const filter = {
+        _id: identity,
+        $or: [
+            { "guestCommentTimes.2": { $exists: false } },
+            { "guestCommentTimes.0": { $lte: minuteAgo } },
+        ],
+    };
+    const update = {
+        // Keep only the latest three server timestamps, ordered even under concurrency.
+        $push: { guestCommentTimes: { $each: [now], $sort: 1, $slice: -3 } },
+        $max: { expiresAt: new Date(now.getTime() + 60000) },
+    };
+    try {
+        await BrowserIdentity.updateOne(filter, update, { upsert: true }).maxTimeMS(5000);
+    } catch (error) {
+        if (error.code !== 11000) throw error;
+        // An existing full window (or simultaneous first insert) conflicts with _id.
+        // Retry without insertion: the same atomic predicate still enforces the cap.
+        const result = await BrowserIdentity.updateOne(filter, update).maxTimeMS(5000);
+        if (result.matchedCount === 1) return;
+        throw httpError(429, "COMMENT_RATE_LIMIT", "Maximum 3 guest comments per minute. Please wait up to 60 seconds and try again.");
+    }
 }
 
 async function updateComment(actor, commentId, input) {

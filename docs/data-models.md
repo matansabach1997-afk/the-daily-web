@@ -1,6 +1,6 @@
 # Current persistent data
 
-`User`, `Article`, `Session` and central `ViewStat` are implemented. MongoDB stores them as `users`, `articles`, `sessions`, `viewstats`. A schema is the field/validation definition; a model supplies operations such as `find`, `create` and `findOneAndUpdate`. An ObjectId reference stores another document's ID; `populate` loads selected referenced fields. It is not a foreign-key constraint.
+`User`, `Article`, `Session`, `ViewStat`, `Comment` and the technical `BrowserIdentity` throttle are implemented. MongoDB stores them as `users`, `articles`, `sessions`, `viewstats`, `comments`, `browseridentities`. A schema is the field/validation definition; a model supplies operations such as `find`, `create` and `findOneAndUpdate`. An ObjectId reference stores another document's ID; `populate` loads selected referenced fields. It is not a foreign-key constraint.
 
 ## User
 
@@ -55,8 +55,14 @@ ViewStat stores `article` (Article reference), `browserId` (lowercase UUID v4), 
 
 Popularity is the lifetime sum of views, computed on reads, never duplicated in Article. Viewed means any bucket exists for the article/browser. Editor analytics groups these records by UTC hour and reads exact publicationHistory markers. These reads reuse the existing indexes; this layer changes no schema or setup-indexes script. See [analytics](analytics.md) for bounds, query costs and browser-vs-account semantics.
 
-BrowserIdentity is a helper storing a random UUID in localStorage, not a MongoDB collection or trusted server identity. Read [view tracking](view-tracking.md) for lifecycle, growth, deletion boundaries and future work.
+The BrowserIdentity helper stores a random UUID in localStorage. The Comments integration now adds a technical MongoDB record keyed by that same UUID for a rolling guest-comment quota; it does not introduce another identity generator or trusted ownership credential. Read [view tracking](view-tracking.md) and [Comments](comments.md) for the lifecycle and limits.
+
+## Comment and guest throttle
+
+Comment stores article reference, trimmed body (1–2000 characters), author User reference or null, optional browserId (excluded from normal queries), and timestamps. Guest records require browserId instead of a User. Public DTOs exclude browserId. Existing authenticated records remain valid; existing author-only update/delete rules are unchanged. Index: `{article:1,createdAt:-1,_id:-1}`.
+
+BrowserIdentity stores `_id` as the existing validated UUID, `guestCommentTimes` (the latest three server admission timestamps), and `expiresAt`. Its unique `_id` and an expiresAt TTL index support atomic rolling-minute enforcement and eventual removal of inactive throttle records. No growing event array, separate RateLimit collection or transaction. `scripts/setup-indexes.js` now registers both Comment and BrowserIdentity. Quota reservation precedes comment insertion; a failed insert conservatively consumes that slot until it expires. Client-controlled UUID rotation is not prevented; see [Comments](comments.md).
 
 ## Later collections
 
-Comment, a server-side BrowserIdentity collection and ReadReceipt remain deferred. No RateLimit collection, transactions or replica-set deployment. Public search/category and ViewStat indexes are declared; popularity/viewed filtering and analytics backend now use them, while their final UI remains deferred. `npm run db:indexes` creates declared indexes; it does not drop unknown existing ones or migrate data.
+ReadReceipt remains deferred. No RateLimit collection, transactions or replica-set deployment. `npm run db:indexes` creates declared indexes; it does not drop unknown existing ones or migrate data.

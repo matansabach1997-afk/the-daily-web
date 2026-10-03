@@ -13,7 +13,7 @@ Base URL: `http://127.0.0.1:3000`. JSON requests use `Content-Type: application/
 - Errors: `{ error: { code, message, fields? }, requestId }`. Every response has `X-Request-Id`; API responses use `Cache-Control: no-store`.
 - IDs are 24-character ObjectId strings; dates are ISO strings; null publication dates/content mean never published.
 
-List size is fixed at 20. Pass the returned opaque cursor unchanged to the same query; preserve filters when paging and reset cursor if filters change. There is no total-count query. Ordering is deterministic using `_id` as a tie-breaker; workspace updates may move entries between pages, so clients should deduplicate IDs/reset on refresh. This is not snapshot isolation.
+Paginated Article/User lists have a fixed size of 20; the existing Comments list returns all comments for one article, without meta/cursor. Pass the returned opaque cursor unchanged to the same paginated query; preserve filters when paging and reset cursor if filters change. There is no total-count query. Ordering is deterministic using `_id` as a tie-breaker; workspace updates may move entries between pages, so clients should deduplicate IDs/reset on refresh. This is not snapshot isolation.
 
 All DB-backed endpoints may return 503 if MongoDB is unavailable and sanitized 500 for unexpected faults. Body parsing can return 400/413. Guest requests to protected endpoints return 401; authenticated wrong-role requests 403. Unknown fields are rejected where an input schema is defined. HTTP payload limit is 256 KB. No arbitrary Mongo query/update operators are accepted.
 
@@ -73,7 +73,7 @@ Example save body:
 }
 ```
 
-See [workflow](article-workflow.md) for lengths, validation and all transitions. Public search/filter/sort is specified below. Popularity/viewed and Editor analytics now reuse the existing services; Comments and Weather remain deferred. Do not create duplicate Article routes/controllers/services.
+See [workflow](article-workflow.md) for lengths, validation and all transitions. Public search/filter/sort is specified below. Popularity/viewed and Editor analytics reuse the existing services. Comments now support the central guest integration described below. Do not create duplicate Article routes/controllers/services.
 
 ### Public feed query contract
 
@@ -106,7 +106,7 @@ Run the existing `npm.cmd run db:indexes` after updating: the Article model adds
 
 Home, public article, Login and workspaces use `Cache-Control: no-store`; a session-cookie lookup requiring an unavailable DB returns the existing 503 EJS error page. Protected pages return 401 HTML to Guests and 403 HTML to the wrong role; invalid edit/review IDs return 400 HTML. A well-formed ID is not proof of article existence/ownership: Reporter/Editor scaffolds currently display no article data. Unknown authorized page URLs still render 404 EJS; unknown API URLs still return the shared JSON error.
 
-The public article page calls the same `getPublic` service as the JSON detail API, not an internal HTTP endpoint. EJS escapes the entire approved plain-text body; CSS preserves line breaks. JavaScript is not required for reading. Deferred `/js/browser-identity.js` and `/js/article.js` add best-effort view tracking only. The feed uses `/js/feed.js` and `/css/feed.css`; the detail uses `/css/article.css`.
+The public article page calls the same `getPublic` service as the JSON detail API, not an internal HTTP endpoint. EJS escapes the entire approved plain-text body; CSS preserves line breaks. JavaScript is not required for reading. Deferred `/js/browser-identity.js` and `/js/article.js` add independent best-effort view tracking and AJAX comments. The feed uses `/js/feed.js` and `/css/feed.css`; the detail uses `/css/article.css`.
 
 ## Public view recording
 
@@ -128,6 +128,20 @@ The central `/analytics` page consumes this unchanged API using 7/30/90-day pres
 
 Login uses the existing POST auth route; Logout uses the existing DELETE session route. Both require browser JavaScript and redirect home on success. Navigation refreshes through the existing GET session API and displays only the matching role's workspace link. No authentication endpoints, existing JSON contracts or role redirects changed. Workspace pages load `/css/reporter.css` or `/css/editor.css` and their own scripts under `/js/reporter/` or `/js/editor/`; the scripts contain no feature behavior yet.
 
-## Reserved backend namespaces — not implemented endpoints
+## Merged feature routers
 
-`/api/comments` and `/api/weather` each mount one empty Express Router after the existing `/api` session loader. Requests currently fall through to the shared JSON 404; there are no success placeholders, models, provider calls or CRUD implementations. C and D add endpoints inside their own routers without editing `app.js`. Future input/response contracts belong in their task notes for central integration; current Article/auth contracts remain unchanged. See [ownership boundaries](team-task-boundaries.md).
+The merged Comments and Weather routers are no longer empty placeholders. Both keep their existing mounts; no app.js changes are needed for this Comments integration. Weather is outside this task; see its feature notes. See [ownership boundaries](team-task-boundaries.md).
+
+## Comments: public reads and guest/authenticated creation
+
+| Method/path | Caller/input | Success | Main errors |
+| --- | --- | --- | --- |
+| GET `/api/comments?articleId=<id>` | Anyone; public article only | 200 `{data:[CommentDto...]}`, newest first, no pagination meta | 400, 404 |
+| GET `/api/comments/:id` | Anyone; public article only | 200 Item CommentDto | 400, 404 |
+| POST `/api/comments` | Guest `{articleId,body,browserId}`; authenticated `{articleId,body}` with optional valid browserId | 201 Item CommentDto | 400 shape/identity, 404 non-public, 422 body, 429 guest limit |
+| PATCH `/api/comments/:id` | Authenticated author only; `{body}` | 200 Item CommentDto | 400, 401, 403, 404, 422 |
+| DELETE `/api/comments/:id` | Authenticated author only; empty body | 204 | 400, 401, 403, 404 |
+
+CommentDto: `{_id,article,body,author:{_id,username}|null,createdAt,updatedAt}`. Guest identity is never returned. Body is trimmed, 1–2000 characters. Guest browserId is the existing UUID v4, required and normalized lowercase; unknown fields are rejected. Three Guest admissions per rolling 60 seconds per identity across all articles; the fourth returns 429 `COMMENT_RATE_LIMIT`. This is enforced atomically in MongoDB, not by the form. Existing authenticated creation and author-only update/delete remain; a browser ID does not grant ownership. See [Comments](comments.md) for persistence, concurrency, failure behavior and the limitation of client-replaceable IDs.
+
+The existing full article page loads/posts comments using fetch, without reloading or replacing its server-rendered body. Run `npm.cmd run db:indexes` to register Comment and BrowserIdentity indexes. No dependencies or auth API changes.

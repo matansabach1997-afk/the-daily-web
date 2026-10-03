@@ -4,6 +4,8 @@ const assert = require("node:assert/strict");
 const app = require("../app");
 const Article = require("../models/Article");
 const Comment = require("../models/Comment");
+const BrowserIdentity = require("../models/BrowserIdentity");
+const { randomUUID } = require("node:crypto");
 
 const {
     openDatabase,
@@ -27,6 +29,7 @@ before(async () => {
 
     await Comment.createCollection();
     await Comment.createIndexes();
+    await BrowserIdentity.createIndexes();
 
     users = await accounts();
 
@@ -113,7 +116,7 @@ test("comments can be listed for a public article", async () => {
     );
 });
 
-test("guest cannot create a comment", async () => {
+test("guest needs a valid browser identity to create a comment", async () => {
     const result = await call(
         "/api/comments",
         "POST",
@@ -123,7 +126,89 @@ test("guest cannot create a comment", async () => {
         }
     );
 
-    assert.equal(result.status, 401);
+    assert.equal(result.status, 400);
+    assert.equal(result.data.error.code, "INVALID_BROWSER_ID");
+    for (const browserId of [null, "bad", 42, [randomUUID()], { $ne: null }]) {
+        const invalid = await call("/api/comments", "POST", { articleId: String(publicArticle._id), body: "Test", browserId });
+        assert.equal(invalid.status, 400);
+    }
+});
+
+test("guest creates and publicly reads comments without leaking browser identity or creating a User", async () => {
+    const browserId = randomUUID();
+    const User = require("../models/User");
+    const before = await User.countDocuments();
+    const created = await call("/api/comments", "POST", {
+        articleId: String(publicArticle._id), body: "  Guest text <script>not markup</script>  ", browserId: browserId.toUpperCase(),
+    });
+    assert.equal(created.status, 201);
+    assert.equal(created.data.data.author, null);
+    assert.equal(created.data.data.body, "Guest text <script>not markup</script>");
+    assert.ok(!JSON.stringify(created.data).includes(browserId));
+    const stored = await Comment.findById(created.data.data._id).select("+browserId").lean();
+    assert.equal(stored.browserId, browserId);
+    const read = await call(`/api/comments/${stored._id}`);
+    assert.equal(read.status, 200);
+    const listed = await call(`/api/comments?articleId=${publicArticle._id}`);
+    assert.ok(listed.data.data.some((row) => row._id === String(stored._id)));
+    assert.ok(!JSON.stringify(listed.data).includes("browserId"));
+    assert.equal(await User.countDocuments(), before);
+    assert.equal((await call(`/api/comments/${stored._id}`, "PATCH", { body: "Not owned" })).status, 401);
+    assert.equal((await call(`/api/comments/${stored._id}`, "DELETE")).status, 401);
+    assert.equal((await call(`/api/comments/${stored._id}`, "PATCH", { body: "Not owned" }, "reporter")).status, 403);
+});
+
+test("guest cap is three per rolling minute across articles, independent for each browser", async () => {
+    const browserId = randomUUID();
+    const another = await Article.create({ reporter: users.reporter._id, workingContent: content, publishedContent: content, publishedAt: new Date(), status: "pending" });
+    for (let index = 0; index < 3; index++) {
+        const articleId = index === 1 ? String(another._id) : String(publicArticle._id);
+        assert.equal((await call("/api/comments", "POST", { articleId, body: "Allowed", browserId })).status, 201);
+    }
+    const fourth = await call("/api/comments", "POST", { articleId: String(another._id), body: "Blocked", browserId });
+    assert.equal(fourth.status, 429);
+    assert.equal(fourth.data.error.code, "COMMENT_RATE_LIMIT");
+    assert.equal((await call("/api/comments", "POST", { articleId: String(another._id), body: "Other browser", browserId: randomUUID() })).status, 201);
+    assert.equal((await BrowserIdentity.findById(browserId).lean()).guestCommentTimes.length, 3);
+    // A connected account keeps its existing behavior even when the sent guest ID is capped.
+    assert.equal((await call("/api/comments", "POST", { articleId: String(another._id), body: "Signed in", browserId }, "reporter")).status, 201);
+});
+
+test("parallel guest requests cannot exceed the cap, including racing first inserts", async () => {
+    const browserId = randomUUID();
+    const results = await Promise.all(Array.from({ length: 10 }, () => call("/api/comments", "POST", {
+        articleId: String(publicArticle._id), body: "Concurrent", browserId,
+    })));
+    assert.equal(results.filter((result) => result.status === 201).length, 3);
+    assert.equal(results.filter((result) => result.status === 429).length, 7);
+    assert.equal(await Comment.countDocuments({ browserId }), 3);
+});
+
+test("rolling window persists in MongoDB and reopens without depending on TTL cleanup", async () => {
+    const indexes = await BrowserIdentity.collection.indexes();
+    assert.ok(indexes.some((index) => index.key.expiresAt === 1 && index.expireAfterSeconds === 0));
+    const browserId = randomUUID();
+    const now = Date.now();
+    await BrowserIdentity.create({ _id: browserId, guestCommentTimes: [now - 61000, now - 10000, now - 1000].map((value) => new Date(value)), expiresAt: new Date(now + 60000) });
+    const input = { articleId: String(publicArticle._id), body: "Window", browserId };
+    assert.equal((await call("/api/comments", "POST", input)).status, 201);
+    assert.equal((await call("/api/comments", "POST", input)).status, 429);
+    const times = [new Date(now - 65000), new Date(now - 64000), new Date(now - 63000)];
+    await BrowserIdentity.updateOne({ _id: browserId }, { $set: { guestCommentTimes: times } });
+    for (let index = 0; index < 3; index++) assert.equal((await call("/api/comments", "POST", input)).status, 201);
+    assert.equal((await call("/api/comments", "POST", input)).status, 429);
+});
+
+test("guest validation/public visibility happen before quota reservation", async () => {
+    const browserId = randomUUID();
+    for (const body of ["", "  ", "x".repeat(2001)]) {
+        assert.equal((await call("/api/comments", "POST", { articleId: String(publicArticle._id), body, browserId })).status, 422);
+    }
+    const denied = await call("/api/comments", "POST", { articleId: String(privateArticle._id), body: "Not public", browserId });
+    assert.equal(denied.status, 404);
+    assert.equal(await BrowserIdentity.findById(browserId), null);
+    assert.equal(await Comment.countDocuments({ article: privateArticle._id }), 0);
+    assert.equal((await call("/api/comments", "POST", { articleId: String(publicArticle._id), body: "Tamper", browserId, author: users.editor._id })).status, 400);
 });
 
 test("comments cannot be created or listed for a private article", async () => {
@@ -252,4 +337,16 @@ test("invalid comment and article IDs are rejected", async () => {
     );
 
     assert.equal(invalidArticle.status, 400);
+});
+
+test("public SSR article includes the existing body plus AJAX comment controls, not private content", async () => {
+    const response = await fetch(`${http.baseUrl}/articles/${publicArticle._id}`);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.ok(html.includes(content.body));
+    assert.match(html, /id="comments-list"/);
+    assert.match(html, /id="comment-form"/);
+    assert.match(html, /maxlength="2000" required disabled/);
+    assert.ok(html.indexOf('src="/js/browser-identity.js"') < html.indexOf('src="/js/article.js"'));
+    assert.ok(!html.includes("workingContent"));
 });

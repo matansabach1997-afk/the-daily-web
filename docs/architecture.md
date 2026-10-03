@@ -68,7 +68,7 @@ The central Analytics page has its own page router/controller/EJS/JS/CSS, outsid
 
 `GET /login` still renders a form for guests or redirects authenticated users to `/`. `login.js` sends JSON to the existing auth API and returns home on success. `main.js` refreshes the session display and handles Logout. The cookie stays HttpOnly; browser role display is not authorization.
 
-`GET /articles/:id` renders the complete approved body in its initial HTML using `articleQueryService.getPublic`, with no internal HTTP request. `article.ejs` uses escaped EJS `<%=` and preserves plain-text line breaks through CSS. Title, category, first publication date, reporter, summary and main image accompany the body. It remains readable without JavaScript. Private content never reaches these templates. Comments and Weather UI remain unimplemented.
+`GET /articles/:id` renders the complete approved body in its initial HTML using `articleQueryService.getPublic`, with no internal HTTP request. `article.ejs` uses escaped EJS `<%=` and preserves plain-text line breaks through CSS. Title, category, first publication date, reporter, summary and main image accompany the body. It remains readable without JavaScript. Private content never reaches these templates. Comments now enhance this same page with AJAX; Weather UI remains outside this integration.
 
 After HTML parsing, `browser-identity.js` provides a same-origin localStorage UUID and `article.js` sends one anonymous POST to `/api/view-stats`. The route/database guard/controller/service validates inputs and calls `articleQueryService.requirePublicArticle` (exists-only, shared public filter). ViewStat atomically increments an article/browser/hour bucket. Article has no per-view array, auth tokens are not reused, and tracking failure never changes the page. This is best-effort client-reported counting, not unique-reader or abuse-proof analytics. See [view tracking](view-tracking.md) for initialization, growth and cleanup boundaries.
 
@@ -80,7 +80,7 @@ Reporter and Editor page routers are mounted once in `app.js`, load the existing
 
 Each area owns its EJS directory, page-specific JS directory and scoped stylesheet. The shared header accepts an optional server-chosen `pageStylesheet`; shared navigation and `main.js` handle role-link visibility. Login/logout/session behavior and destinations are unchanged.
 
-The empty Comments and Weather routers are already mounted under `/api/comments` and `/api/weather`, after shared session loading. They currently fall through to the normal JSON 404. No Comment/Weather service or controller, new model, seed script, external fetch or cache exists yet. A/B/C/D ownership and central follow-up integration are listed in [team task boundaries](team-task-boundaries.md).
+The merged Comments and Weather routers retain their original mounts after shared session loading. This central integration changes only Comments: GET list/detail checks public Article visibility; POST permits guests with the existing browser UUID; PATCH/DELETE retain authentication and author checks. `commentService` validates input/publication, atomically reserves a guest slot in BrowserIdentity, then creates Comment. The existing article.js independently loads/posts comments while its original anonymous view tracking stays unchanged. Browser IDs are not ownership credentials or public DTO fields. See [Comments](comments.md) for rolling-window concurrency, failure behavior and client-identity limitations; unrelated teammate implementations are not redesigned.
 
 ## Errors and logs
 
