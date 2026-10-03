@@ -1,7 +1,8 @@
 const express = require("express");
+const weatherController = require("../controllers/weatherController");
 
 const router = express.Router();
-// Teammate D: add weather endpoints here. /api/weather is already mounted.
-// No provider requests or cache are implemented in this scaffold.
+
+router.get("/", weatherController.getWeather);
 
 module.exports = router;
