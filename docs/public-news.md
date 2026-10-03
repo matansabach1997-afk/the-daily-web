@@ -43,4 +43,4 @@ The implementation session could not perform visual browser checks: no connected
 
 ## Deliberately deferred
 
-Comments UI, trusted server Guest identity/rate limiting, Weather UI and seed data remain deferred. BrowserIdentity, ViewStat recording, popularity/viewed controls and the separate Editor `/analytics` page are implemented centrally. No Reporter/Editor/Comments/Weather/Seed-owned implementation is changed by these central features.
+Comments now load and submit via AJAX in the existing article page, with server-enforced guest limits using the existing browser UUID; see [Comments](comments.md). Stronger trusted-device anti-abuse, comment moderation/edit UI, dependent cleanup and Weather UI remain separate work. This Comments integration leaves Reporter/Editor/Weather/Seed implementations unchanged.

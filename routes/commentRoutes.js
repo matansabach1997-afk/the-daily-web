@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/", requireDatabase, controller.listComments);
 router.get("/:id", requireDatabase, controller.getComment);
 
-router.post("/", requireAuth, requireDatabase, controller.createComment);
+router.post("/", requireDatabase, controller.createComment);
 router.patch("/:id", requireAuth, requireDatabase, controller.updateComment);
 router.delete("/:id", requireAuth, requireDatabase, controller.deleteComment);
 

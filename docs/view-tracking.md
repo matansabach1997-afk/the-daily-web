@@ -27,7 +27,7 @@ Interface: `window.DailyWebBrowserIdentity.getBrowserId()` returns a UUID v4 str
 - Blocked/full storage falls back to an in-memory ID for this document only. If secure UUID generation is unavailable, returns null and tracking is skipped.
 - No password, session token/cookie, user data or fingerprint is stored. The ID is not secret, authentication, a unique person or proof of ownership.
 
-This phase adds a helper, **not a BrowserIdentity MongoDB collection**. Future trusted Guest identity/ownership/rate limiting remains central work. This freely replaceable UUID must not be the sole anti-spam/authorization mechanism.
+The recording phase added a helper, not a collection. The later [Comments integration](comments.md) adds a BrowserIdentity throttle record keyed by the same UUID for the requested guest limit. This freely replaceable label is not trusted device identification or authorization; stronger anti-abuse and guest ownership remain separate decisions. The existing helper and view-recording behavior are unchanged.
 
 ## Exact view definition
 

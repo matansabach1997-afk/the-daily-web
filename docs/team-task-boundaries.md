@@ -86,7 +86,7 @@ The common header accepts an optional, server-chosen `pageStylesheet`; A/B contr
 
 **Definition of Done for future feature work:** Comment model plus list/create/read/update/delete APIs, input validation, server-side ownership/role restrictions and isolated tests, with a documented contract for the future UI. Listing must not expose private/unpublished articles. Return existing JSON/error shapes. Authenticated comment operations and service tests can be developed independently now.
 
-**Central later:** public article comments UI, trusted Guest device identity, the required server-enforced three-comments-per-minute limit, Guest update/delete ownership policy, and bounded Article-delete cleanup/index registration. Guest writes must remain disabled until the central identity/rate-limit integration exists; do not accept a client-supplied user/device ID as trusted identity. Full Guest-comment acceptance is therefore a central milestone, not a claim of this independent task's completion.
+**Central integration completed (2026-10-03):** existing article-page AJAX list/create, Guest POST using the existing BrowserIdentity UUID, persistent atomic three-admissions-per-rolling-minute quota, and Comment/BrowserIdentity index registration. This explicitly authorized integration extends the merged Comment files; other teammate areas remain untouched. The UUID is not trusted ownership: guest PATCH/DELETE remain unavailable. Stronger anti-abuse, guest ownership policy and bounded Article-delete cleanup remain separate decisions. See [Comments](comments.md).
 
 ## D — Seed Data + Weather Backend
 
@@ -113,7 +113,7 @@ The common header accepts an optional, server-chosen `pageStylesheet`; A/B contr
 
 - Public news feed, search/category/date-sort/infinite-scroll UI and query extensions are now implemented centrally; changes remain centrally owned.
 - Public `views/article.ejs` and complete approved content in initial HTML are now implemented centrally.
-- Comments UI integration into the existing `article.ejs` remains future central work.
+- Comments AJAX list/create is integrated into the existing `article.ejs` and article.js; guest limiting is central, not a replacement teammate backend.
 - Client BrowserIdentity and ViewStat recording are now central implementations, including their files, tests and index registration.
 - Popularity/viewed public queries, feed controls and Editor analytics aggregation/SVG page are now central implementations. `/analytics` uses `analyticsPageRoutes.js`, `analyticsPageController.js`, `views/analytics/*`, `public/js/analytics.js` and `public/css/analytics.css`, not teammate Editor files. Existing shared navigation links there for Editors only. See [analytics](analytics.md).
 - Trusted Guest identity/comment limiting and ReadReceipt remain future work. Viewed filtering currently uses ViewStat existence per browser. The localStorage UUID is replaceable, not authentication or the sole comment limiter.

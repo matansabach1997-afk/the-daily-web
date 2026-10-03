@@ -12,7 +12,7 @@ async function run({ browser = browserId, article = articleId, failure, status =
   // Only read access is provided; code attempting to replace HTML fails the test.
   const context = {
     window: { DailyWebBrowserIdentity: { getBrowserId: () => browser } },
-    document: { querySelector: () => article ? { dataset: { publicArticleId: article } } : null },
+    document: { getElementById: () => null, querySelector: () => article ? { dataset: { publicArticleId: article } } : null },
     fetch: async (url, options) => {
       calls.push({ url, options });
       if (failure) throw new Error("offline");

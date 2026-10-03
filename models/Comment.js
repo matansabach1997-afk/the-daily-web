@@ -11,11 +11,19 @@ const commentSchema = new mongoose.Schema(
             type: String,
             required: true,
             trim: true,
+            maxlength: 2000,
         },
         author: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
+            default: null,
+            required: function () { return !this.browserId; },
+        },
+        browserId: {
+            type: String,
+            default: null,
+            select: false,
+            required: function () { return !this.author; },
         },
     },
     {

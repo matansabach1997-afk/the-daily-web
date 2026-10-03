@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const connectDatabase = require("../config/database");
-const models = [require("../models/User"), require("../models/Article"), require("../models/Session"), require("../models/ViewStat")];
+const models = [require("../models/User"), require("../models/Article"), require("../models/Session"), require("../models/ViewStat"), require("../models/Comment"), require("../models/BrowserIdentity")];
 
 async function run() {
   await connectDatabase();
