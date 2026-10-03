@@ -2,6 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const weatherService = require("../services/weatherService");
+const originalFetch = global.fetch;
+const originalKey = process.env.OPENWEATHER_API_KEY;
 
 test.beforeEach(() => {
   weatherService.clearWeatherCache();
@@ -10,8 +12,9 @@ test.beforeEach(() => {
 
 test.afterEach(() => {
   weatherService.clearWeatherCache();
-  delete process.env.OPENWEATHER_API_KEY;
-  delete global.fetch;
+  if (originalKey === undefined) delete process.env.OPENWEATHER_API_KEY;
+  else process.env.OPENWEATHER_API_KEY = originalKey;
+  global.fetch = originalFetch;
 });
 
 test("weather is fetched and returned in the expected format", async () => {
@@ -103,4 +106,20 @@ test("provider failure is handled safely", async () => {
       return true;
     }
   );
+});
+
+test("existing cache expires at fifteen minutes and matches city case-insensitively", async (t) => {
+  let now = Date.now(), calls = 0;
+  t.mock.method(Date, "now", () => now);
+  global.fetch = async () => {
+    calls++;
+    return { ok: true, json: async () => ({ name: "Tel Aviv", main: { temp: 27, humidity: 60 }, weather: [], wind: { speed: 3.5 } }) };
+  };
+  await weatherService.getWeather("Tel Aviv");
+  now += 15 * 60000 - 1;
+  await weatherService.getWeather("tel aviv");
+  assert.equal(calls, 1);
+  now++;
+  await weatherService.getWeather("Tel Aviv");
+  assert.equal(calls, 2);
 });

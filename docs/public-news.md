@@ -12,6 +12,8 @@ See [API contract](api-contract.md#public-feed-query-contract). Run `npm.cmd run
 
 ## Client behavior
 
+A compact Tel Aviv weather aside above the filters now calls the existing `/api/weather` through its own deferred `weather.js`. It displays temperature/conditions, humidity, wind and retrieval time. Loading/failure/Retry are independent of feed requests; no provider call/key goes to the browser. The existing 15-minute server cache is unchanged, and expired details are hidden/refreshed. See [weather integration](weather-ui.md) for setup and verification.
+
 The Sort by control now includes Newest first, Oldest first and Popularity. Reading status offers All, Viewed and Unviewed. These send `sort=popularity` and `viewed=true|false` to the existing API, composing with search/category/cursor. The browser never sorts popularity or filters only loaded cards. See [analytics](analytics.md) for server definitions and costs.
 
 `browser-identity.js` loads before `feed.js`. Viewed/Unviewed calls `DailyWebBrowserIdentity.getBrowserId()` and sends its ID; All sends neither browserId nor viewed. No separate read list is stored. Blocked storage keeps working through the helper's document-only fallback, but cannot retain history across pages; the UI explains this. Missing/throwing identity resets visibly to All and still loads the feed. A changed identity detected before loading another page resets the cursor/cards instead of mixing identities. All filter changes keep existing abort/stale-response/deduplication/error/end behavior.
@@ -43,4 +45,4 @@ The implementation session could not perform visual browser checks: no connected
 
 ## Deliberately deferred
 
-Comments now load and submit via AJAX in the existing article page, with server-enforced guest limits using the existing browser UUID; see [Comments](comments.md). Stronger trusted-device anti-abuse, comment moderation/edit UI, dependent cleanup and Weather UI remain separate work. This Comments integration leaves Reporter/Editor/Weather/Seed implementations unchanged.
+Comments load and submit via AJAX in the existing article page, with server-enforced guest limits using the existing browser UUID; see [Comments](comments.md). Home now includes the central weather widget using the unchanged teammate backend. Stronger trusted-device anti-abuse, comment moderation/edit UI and dependent cleanup remain separate work. Reporter/Editor/Seed implementations are unchanged by these central integrations.
