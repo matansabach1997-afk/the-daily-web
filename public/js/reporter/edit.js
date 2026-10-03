@@ -14,6 +14,7 @@
   const saveButton = document.getElementById("save-button");
   const submitButton = document.getElementById("submit-button");
   const revisionButton = document.getElementById("revision-button");
+  const backLink = document.getElementById("reporter-back-link");
   const controls = {
     title: document.getElementById("article-title"),
     summary: document.getElementById("article-summary"),
@@ -27,11 +28,12 @@
 
   let article = null;
   let saveTimer = null;
-  let saveInFlight = null;
+  let saveQueue = null;
   let pendingSnapshot = null;
   let lastSavedJson = null;
   let autosaveBlockedAfterError = false;
   let submitting = false;
+  let leaving = false;
 
   function setFeedback(message, kind = "") {
     feedback.textContent = message;
@@ -75,7 +77,9 @@
     statusBadge.dataset.status = article.status;
 
     const editable = isEditable();
-    for (const control of Object.values(controls)) control.disabled = !editable;
+    for (const control of Object.values(controls)) control.disabled = !editable || submitting || leaving;
+    saveButton.disabled = submitting || leaving;
+    submitButton.disabled = submitting || leaving;
     saveButton.hidden = !editable;
     submitButton.hidden = !editable;
     revisionButton.hidden = article.status !== "published";
@@ -116,43 +120,51 @@
     return readJson(response);
   }
 
-  async function drainSaves() {
-    if (saveInFlight || !pendingSnapshot || !isEditable() || autosaveBlockedAfterError) return !autosaveBlockedAfterError;
+  async function processSaves() {
+    while (pendingSnapshot) {
+      const snapshot = pendingSnapshot;
+      const serialized = snapshotJson(snapshot);
+      pendingSnapshot = null;
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      if (serialized === lastSavedJson) continue;
 
-    const snapshot = pendingSnapshot;
-    const serialized = snapshotJson(snapshot);
-    pendingSnapshot = null;
-    if (serialized === lastSavedJson) {
-      setFeedback("Saved", "success");
-      return true;
+      setFeedback("Saving...");
+      setFieldErrors();
+      try {
+        const payload = await sendSave(snapshot);
+        article = payload.data;
+        // This exact form snapshot was acknowledged, even if the server trimmed it.
+        lastSavedJson = serialized;
+        updateStatusUi();
+      } catch (error) {
+        autosaveBlockedAfterError = true;
+        if (!pendingSnapshot) pendingSnapshot = snapshot;
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        setFieldErrors(error.fields);
+        // Redirecting after a failed save would discard the unsaved text.
+        const message = error.status === 401 ?
+          "Please log in in another tab, then retry saving. Your unsaved text is still here." :
+          (error.message || "Save failed");
+        setFeedback(message, "error");
+        return false;
+      }
     }
-
-    setFeedback("Saving...");
-    setFieldErrors();
-    saveInFlight = sendSave(snapshot);
-    try {
-      const payload = await saveInFlight;
-      article = payload.data;
-      lastSavedJson = snapshotJson(article.workingContent);
-      autosaveBlockedAfterError = false;
-      setFeedback("Saved", "success");
-      updateStatusUi();
-    } catch (error) {
-      if (handleAuthFailure(error)) return false;
-      autosaveBlockedAfterError = true;
-      setFieldErrors(error.fields);
-      setFeedback(error.message || "Save failed", "error");
-      return false;
-    } finally {
-      saveInFlight = null;
-    }
-
-    if (pendingSnapshot && !autosaveBlockedAfterError) return drainSaves();
+    setFeedback("Saved", "success");
     return true;
   }
 
+  function drainSaves() {
+    // All callers await the WHOLE queue, including edits added during a request.
+    if (saveQueue) return saveQueue;
+    if (!isEditable() || autosaveBlockedAfterError) return Promise.resolve(false);
+    saveQueue = processSaves().finally(() => { saveQueue = null; });
+    return saveQueue;
+  }
+
   function queueAutosave() {
-    if (!isEditable() || submitting) return;
+    if (!isEditable() || submitting || leaving) return;
     pendingSnapshot = currentContent();
     autosaveBlockedAfterError = false;
     clearTimeout(saveTimer);
@@ -163,19 +175,15 @@
     }, AUTOSAVE_DELAY_MS);
   }
 
-  async function saveLatest({ force = false } = {}) {
-    if (!isEditable()) return true;
+  function saveLatest() {
+    if (!isEditable()) return Promise.resolve(false);
     clearTimeout(saveTimer);
     saveTimer = null;
-    const latest = currentContent();
-    if (force || snapshotJson(latest) !== lastSavedJson) pendingSnapshot = latest;
+    // Always queue the current form: it may undo a different in-flight snapshot.
+    // processSaves skips it if that same snapshot has already been acknowledged.
+    pendingSnapshot = currentContent();
     autosaveBlockedAfterError = false;
-
-    if (saveInFlight) {
-      try { await saveInFlight; } catch { /* drainSaves reports the error. */ }
-    }
-    if (pendingSnapshot) return drainSaves();
-    return !autosaveBlockedAfterError;
+    return drainSaves();
   }
 
   async function loadArticle() {
@@ -202,10 +210,9 @@
   }
 
   async function submitArticle() {
-    if (!isEditable() || submitting) return;
+    if (!isEditable() || submitting || leaving) return;
     submitting = true;
-    submitButton.disabled = true;
-    saveButton.disabled = true;
+    updateStatusUi();
     setFieldErrors();
 
     try {
@@ -228,8 +235,7 @@
       setFeedback(error.message || "Submission failed", "error");
     } finally {
       submitting = false;
-      saveButton.disabled = false;
-      submitButton.disabled = false;
+      updateStatusUi();
     }
   }
 
@@ -262,9 +268,35 @@
 
   form.addEventListener("input", queueAutosave);
   form.addEventListener("change", queueAutosave);
-  saveButton.addEventListener("click", () => saveLatest({ force: true }));
+  saveButton.addEventListener("click", () => saveLatest());
   submitButton.addEventListener("click", submitArticle);
   revisionButton.addEventListener("click", startRevision);
+
+  function flushPendingSave() {
+    if (saveTimer !== null && !submitting && !leaving) saveLatest();
+  }
+  // blur does not bubble; capture lets the form observe its input fields.
+  form.addEventListener("blur", flushPendingSave, true);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) flushPendingSave();
+  });
+
+  // This in-app navigation can wait for an acknowledgement. Tab close/reload cannot.
+  backLink.addEventListener("click", async (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const dirty = snapshotJson(currentContent()) !== lastSavedJson;
+    if (!isEditable() || (!dirty && !saveQueue && !submitting && !leaving)) return;
+    event.preventDefault();
+    if (submitting || leaving) return;
+    leaving = true;
+    updateStatusUi();
+    try {
+      if (await saveLatest()) window.location.assign(backLink.href);
+    } finally {
+      leaving = false;
+      updateStatusUi();
+    }
+  });
 
   loadArticle();
 })();
