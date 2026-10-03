@@ -1,7 +1,7 @@
 <%- include("../partials/header") %>
 
 <main id="main-content" class="container reporter-workspace" data-article-id="<%= articleId %>">
-  <p><a href="/reporter">&larr; Back to Reporter Workspace</a></p>
+  <p><a id="reporter-back-link" href="/reporter">&larr; Back to Reporter Workspace</a></p>
 
   <div class="reporter-heading-row reporter-editor-heading">
     <div>
@@ -102,7 +102,9 @@
 
   <p class="autosave-note">
     Draft and returned articles autosave after you stop typing.
-    Submission waits for the latest save to finish.
+    Submit and Back to Reporter Workspace wait for all saves to finish.
+    Before closing or refreshing, wait for Saved. Unsaved changes cannot be
+    guaranteed after a sudden close or connection failure.
   </p>
 </main>
 

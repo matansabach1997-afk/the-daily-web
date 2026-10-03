@@ -49,6 +49,8 @@ test("Reporter edit page enforces ownership before rendering private article UI"
   assert.match(html, /id="submit-button"/);
   assert.match(html, /id="revision-button"/);
   assert.match(html, /id="editor-note-panel"/);
+  assert.match(html, /id="reporter-back-link" href="\/reporter"/);
+  assert.match(html, /Before closing or refreshing, wait for Saved/);
 
   assert.equal((await fetch(`${http.baseUrl}/reporter/edit/${other._id}`, { headers: { Cookie: cookies.reporter } })).status, 404);
 });
