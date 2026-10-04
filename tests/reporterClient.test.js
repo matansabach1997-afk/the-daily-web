@@ -33,14 +33,15 @@ async function browser() {
   const document = { ...element(), hidden: false, querySelector: () => ({ dataset: { articleId } }), getElementById: (id) => nodes[id], createElement: element };
   const requests = [], navigations = [], timers = new Map();
   let now = 0, nextTimer = 0;
+  const window = { ...element(), location: { assign: (url) => navigations.push(url) } };
   vm.runInNewContext(readFileSync(path.join(__dirname, "../public/js/reporter/edit.js"), "utf8"), {
-    document, window: { location: { assign: (url) => navigations.push(url) } },
+    document, window, TextEncoder,
     setTimeout(fn, delay) { timers.set(++nextTimer, { fn, at: now + delay }); return nextTimer; },
     clearTimeout(id) { timers.delete(id); },
     fetch(url, options = {}) { return new Promise((resolve, reject) => requests.push({ url, options, resolve, reject })); },
   });
   const client = {
-    nodes, document, requests, navigations, timers,
+    nodes, document, window, requests, navigations, timers,
     edit(title) {
       assert.equal(nodes["article-title"].disabled, false);
       nodes["article-title"].value = title;
@@ -69,6 +70,62 @@ async function browser() {
 
 function titleSent(client, index) { return JSON.parse(client.requests[index].options.body).workingContent.title; }
 function submissions(client) { return client.requests.filter((request) => request.url.endsWith("/submissions")); }
+
+test("pagehide flushes pending debounce with keepalive, without duplicate visibility saves", async () => {
+  const client = await browser();
+  client.edit("Before refresh");
+  client.window.emit("pagehide");
+  assert.equal(titleSent(client, 1), "Before refresh");
+  assert.equal(client.requests[1].options.keepalive, true);
+  client.document.hidden = true;
+  client.document.emit("visibilitychange");
+  client.window.emit("pagehide", { persisted: true });
+  await client.tick();
+  assert.equal(client.requests.length, 2);
+  await client.saved(1);
+  assert.equal(client.nodes["save-feedback"].textContent, "Saved");
+  assert.equal(client.window.listeners.beforeunload, undefined);
+});
+
+test("page exit preserves serialization and the newest pending snapshot while a save is in flight", async () => {
+  const client = await browser();
+  client.edit("Already saving");
+  await client.tick();
+  assert.equal(client.requests[1].options.keepalive, true);
+  client.edit("Latest before exit");
+  client.window.emit("pagehide");
+  assert.equal(client.requests.length, 2, "Never race two PATCH requests");
+  await client.saved(1); // Continuation is testable while the document is still alive.
+  assert.equal(titleSent(client, 2), "Latest before exit");
+  assert.equal(client.requests[2].options.keepalive, true);
+  await client.saved(2);
+});
+
+test("large UTF-8 drafts save intact normally instead of exceeding the keepalive budget", async () => {
+  const client = await browser();
+  const body = "\u05d0".repeat(40000);
+  client.nodes["article-body"].value = body;
+  client.edit("Long draft");
+  await client.tick();
+  assert.equal(client.requests[1].options.keepalive, false);
+  assert.equal(JSON.parse(client.requests[1].options.body).workingContent.body, body);
+  await client.saved(1);
+  client.window.emit("pagehide");
+  assert.equal(client.requests.length, 2);
+});
+
+test("failed exit flush never submits or reports Saved and can be retried on the page", async () => {
+  const client = await browser();
+  client.edit("Keep on failure");
+  client.window.emit("pagehide");
+  await client.reply(1, { message: "Offline" }, 503);
+  client.window.emit("pagehide");
+  assert.equal(client.requests.length, 2);
+  assert.equal(submissions(client).length, 0);
+  assert.equal(client.nodes["save-feedback"].dataset.kind, "error");
+  client.nodes["save-button"].emit("click");
+  await client.saved(2);
+});
 
 test("Submit waits for BOTH the in-flight save and the newer pending save", async () => {
   const client = await browser();

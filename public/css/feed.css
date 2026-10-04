@@ -1,7 +1,11 @@
 .public-feed { margin-block: 2rem; }
 .public-feed h1 { margin-bottom: 0; }
 .home-weather { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.5rem; margin-block: 1rem; padding: 0.75rem 1rem; background: #eff6ff; border: 1px solid #dbeafe; border-radius: 0.5rem; font-size: 0.875rem; overflow-wrap: anywhere; }
-.home-weather > div { flex: 1 1 240px; min-width: 0; }
+.public-feed { width: min(1200px, calc(100% - 2rem)); }
+.news-layout { display: flex; align-items: flex-start; gap: 1.5rem; }
+.news-main { flex: 1; min-width: 0; }
+.news-layout > .home-weather { order: 1; flex: 0 0 220px; margin-top: 1.5rem; }
+.home-weather > div { flex: 1 1 100%; min-width: 0; }
 .home-weather h2 { margin: 0; font-size: 1rem; }
 .home-weather p { margin: 0.2rem 0; }
 .home-weather button { flex: 0 1 auto; max-width: 100%; }
@@ -51,6 +55,11 @@
 #viewed-help { color: #475569; font-size: 0.875rem; }
 #feed-sentinel { height: 1px; margin-bottom: 2rem; }
 @media (max-width: 900px) { .news-card { flex-basis: calc((100% - 1.5rem) / 2); } }
+@media (max-width: 768px) {
+  .news-layout { flex-direction: column; gap: 0; }
+  .news-main { width: 100%; }
+  .news-layout > .home-weather { order: 0; flex-basis: auto; width: 100%; margin-block: 1rem 0; }
+}
 @media (max-width: 540px) {
   .news-card { flex-basis: 100%; }
   .feed-filters > div, .feed-filters .feed-search { flex-basis: 100%; }

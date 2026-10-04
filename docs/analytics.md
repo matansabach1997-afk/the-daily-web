@@ -66,7 +66,7 @@ Computed popularity cannot use an index on the computed total: it must sum match
 
 Analytics first matches one article using an article-leading index, then uses a facet for lifetime sum and period/hour grouping. Because lifetime totals need all its buckets, this operation scans that article's history, not only the selected period. The existing time index also supports direct range queries; no additional index is justified. Tests check index plans and actual public lookup index usage, not just declared index names.
 
-Existing hard deletion/recording behavior is unchanged. Historical orphan buckets are excluded from public ranking because queries start from existing public Articles; analytics for a deleted article returns 404. Cleanup/retention policy remains deferred.
+Editor-only Article hard deletion now removes its ViewStats and Comments. Analytics for a deleted article returns 404; scoped cleanup can be retried after failure. Recording rechecks parent existence to remove late writes racing with deletion. Long-term retention remains deferred.
 
 ## Handoff and checks
 
@@ -84,7 +84,7 @@ The feed now exposes Popularity and All/Viewed/Unviewed. `browser-identity.js` l
 - Markers use only `publicationMarkers` returned by the API, at their actual timestamps. No marker is inferred from publishedAt or any other date. SVG titles and a visible list supply exact UTC times, including seconds/milliseconds; overlapping markers can be distinguished in the list. SVG title/description, live statuses, keyboard-operable buttons and an expandable recorded-hour text list provide accessible alternatives.
 - Scoped Flexbox controls/cards wrap on small screens; chart width is fluid. Automated tests check resize math, but actual 360/768/1280 viewport rendering needs a connected browser (see testing notes).
 
-Reporter/Editor review/Comments/Weather/Seed-owned files remain untouched. ViewStat management Update/Delete, dependent cleanup, Comments/Weather UI and full demo data remain deferred; no full statistics CRUD completion is claimed.
+The central compliance update adds statistics Delete through the existing Editor-only Article DELETE, alongside scoped dependent cleanup and time-distributed demo data. Counter increments remain the statistics Update operation; analytics remains Read and new buckets Create. No manual statistics-management UI or Editor Workspace changes are introduced.
 
 `tests/analytics.test.js` exercises real isolated MongoDB data: cross-browser/hour totals, zero-view articles, all filter/sort combinations across pages, malformed inputs, missing identity fallback, permissions, exact markers, empty data, safe DTOs and lookup index plans. Run the full commands in [testing](testing.md).
 

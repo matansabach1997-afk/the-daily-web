@@ -55,6 +55,8 @@ The private namespace provides workingContent, status, note and complete history
 | POST `/api/articles/:id/revisions` | Owner Reporter / Editor | No body or `{}` | 200 Item PrivateArticle, draft copied from public | 400, 404, 409 not published |
 | DELETE `/api/articles/:id` | Editor | No body or `{}` | 204, including already absent valid ID | 400, 403 |
 
+DELETE also removes this article's Comments and ViewStats. This is the protected Delete operation for statistics CRUD; there is no guest statistics-delete endpoint. Each cleanup query is article-scoped and time-bounded. Retry the same DELETE after a database failure, even if the Article is already absent. No API request/response shape changes.
+
 Public visibility depends on publishedContent and publishedAt, never the current status. Public APIs do not return workingContent, status, notes, history, body in list rows, passwordHash or session information. `publishedAt` stays at first approval even after updates. JSON detail GETs do not record views; the full article page sends a separate best-effort tracking POST after rendering.
 
 Example create body: `{ "workingContent": {} }`.

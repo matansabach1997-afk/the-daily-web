@@ -1,4 +1,5 @@
 const Comment = require("../models/Comment");
+const Article = require("../models/Article");
 const BrowserIdentity = require("../models/BrowserIdentity");
 const { allowedFields, text, id, browserId } = require("../utils/validation");
 const requireActor = require("../utils/authorization");
@@ -60,9 +61,17 @@ async function createComment(actor, input) {
         browserId: actor ? null : identity,
     });
 
+    // A previously admitted request must not recreate an orphan after article deletion.
+    if (!await Article.exists({ _id: articleId })) {
+        await Comment.deleteOne({ _id: comment._id });
+        throw httpError(404, "ARTICLE_NOT_FOUND", "Article not found.");
+    }
+
     const saved = await Comment.findById(comment._id)
         .populate("author", "_id username")
         .lean();
+
+    if (!saved) throw httpError(404, "COMMENT_NOT_FOUND", "Comment not found.");
 
     return commentDto(saved);
 }
