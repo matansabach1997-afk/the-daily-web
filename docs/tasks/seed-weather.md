@@ -6,26 +6,27 @@ The seed script is located at:
 
 scripts/seed-articles.js
 
-It generates 500 demo articles using the existing User and Article models.
+It generates 500 demo articles using the existing User, Article, Comment and ViewStat models.
 
 The generated data includes:
+
 - Multiple reporters
 - All configured article categories
 - draft, pending, returned and published statuses
 - Different publication dates
 - Published articles with publication history
 - Some published articles with multiple approved updates
+- Three demo Reporters and one Editor, created with salted password hashes
+- 256 comments and 7,760 time-distributed ViewStat buckets
+- Incomplete drafts, complete pending/public content and a bundled local image
 
-The script only removes articles identified as data created by this seed script.
-It does not delete unrelated users or articles.
+Reruns replace 500 reserved, deterministic article IDs and reset their dependent comments/views. Unrelated data and existing demo passwords are preserved; legacy random-ID seed records are not deleted. Use an idle, dedicated local demo database. A stopped run can be repaired by rerunning.
 
-An explicit target argument is required.
+An explicit target argument matching the actual local MONGODB_URI database name is required. Production and system database targets are refused.
 
-Example:
+Set SEED_PASSWORD through a secure prompt (12-128 characters); do not commit it. See the [README seed instructions](../../README.md#repeatable-local-demo-seed).
 
-node --env-file-if-exists=.env scripts/seed-articles.js development
-
-At least one reporter user must already exist before running the seed.
+Run `node --env-file-if-exists=.env scripts/seed-articles.js <exact-database-name>`. No pre-existing Reporter account is required. Reserved username/ID collisions are refused before data changes.
 
 ## Weather API
 
@@ -84,4 +85,4 @@ Provider errors are handled by the backend and are not returned as raw provider 
 
 Weather tests mock the external fetch request and do not require a real provider call.
 
-Seed tests verify the generated article count, structure, categories, seed identification and content variation.
+Seed tests also run against an isolated local MongoDB database: all statuses/categories, password hashing, content validation, analytics before/after markers, safe reruns, collision refusal, absence of orphans and preservation of unrelated records. They do not seed the development database.

@@ -27,6 +27,11 @@ async function recordView(input) {
     const result = await ViewStat.updateOne(filter, update, { runValidators: true }).maxTimeMS(5000);
     if (result.matchedCount !== 1) throw error;
   }
+  // A request admitted before hard deletion must not recreate an orphan bucket.
+  if (!await Article.exists({ _id: articleId })) {
+    await ViewStat.deleteMany(filter).maxTimeMS(5000);
+    throw httpError(404, "ARTICLE_NOT_FOUND", "Article not found.");
+  }
 }
 
 function analyticsPeriod(query) {

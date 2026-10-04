@@ -19,6 +19,8 @@ test("home contains a small independent weather area and serves its script witho
   process.env.OPENWEATHER_API_KEY = "test-secret-not-for-html";
   const html = await (await realFetch(http.baseUrl + "/")).text();
   assert.match(html, /id="home-weather"/);
+  assert.match(html, /class="news-layout">\s*<aside id="home-weather"/);
+  assert.match(html, /<\/aside>\s*<div class="news-main">\s*<form id="feed-filters"/);
   assert.match(html, /data-city="Tel Aviv"/);
   assert.match(html, /id="feed-results"/);
   assert.match(html, /src="\/js\/weather.js" defer/);
@@ -28,6 +30,10 @@ test("home contains a small independent weather area and serves its script witho
   const source = await script.text();
   assert.ok(!source.includes("api.openweathermap.org"));
   assert.ok(!source.includes("OPENWEATHER_API_KEY"));
+  const css = await (await realFetch(http.baseUrl + "/css/feed.css")).text();
+  assert.match(css, /\.news-layout \{ display: flex;/);
+  assert.match(css, /@media \(max-width: 768px\)/);
+  assert.match(css, /\.news-layout \{ flex-direction: column;/);
 });
 
 test("existing Express weather route returns its exact envelope and keeps server caching", async () => {

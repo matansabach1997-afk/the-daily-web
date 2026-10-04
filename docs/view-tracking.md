@@ -72,11 +72,11 @@ Public means a BSON date in publishedAt plus an existing non-null publishedConte
 
 ## Lifecycle boundaries / next phase
 
-Requests for already-deleted articles fail the visibility check. References do not cascade. Existing Article hard deletion is unchanged: historical buckets remain, and deletion concurrent with an already-validated POST can leave a historical bucket. Bounded dependent cleanup and its race policy must be integrated centrally with the other dependent collections; no cleanup framework is added here. Future public/Editor aggregation reads must enforce visibility/permissions.
+Requests for already-deleted articles fail the visibility check. The existing Editor-only Article DELETE now explicitly removes dependent ViewStats and Comments, with scoped/time-bounded queries. A tracking request admitted before deletion rechecks the Article after its write and removes a late bucket if the parent is gone. Retry Article DELETE after partial failure to finish cleanup; no transactions or background cleanup system are required. See [deletion behavior](article-workflow.md#deletion-boundary).
 
 Implemented next: popularity is the sum of recorded views; viewed means a matching article/browser bucket exists; Editor analytics returns totals/hourly series and actual publicationHistory markers. These queries enforce public visibility or Editor permission; no new indexes or Article counters are needed. See [analytics](analytics.md).
 
-Deferred: trusted Guest identity/comment limit, ReadReceipt, protected ViewStat management Update/Delete compliance operations, retention/cleanup, Comments/Weather UI and demo seed. Recording plus aggregate reads do not claim full ViewStat CRUD completion. Feed controls and `/analytics` now consume the existing contracts without changing recording behavior.
+ViewStat CRUD: POST `/api/view-stats` creates a bucket and atomically updates its counter on subsequent views; protected analytics reads/searches one article's time range; Editor-only DELETE `/api/articles/:id` deletes its statistics. No arbitrary guest deletion or manual statistics editor is provided. Long-term retention/rollups and account-based ReadReceipt remain outside this change. The demo seed now supplies time-distributed counters and approval markers.
 
 ## Tests
 

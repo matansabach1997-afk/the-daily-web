@@ -112,10 +112,14 @@
   }
 
   async function sendSave(snapshot) {
+    const body = JSON.stringify({ workingContent: snapshot });
     const response = await fetch(`/api/articles/${encodeURIComponent(articleId)}/working-content`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ workingContent: snapshot }),
+      body,
+      // Keep even a normal in-flight autosave alive on refresh/navigation.
+      // Larger UTF-8 payloads still save normally: keepalive has a 64 KiB budget.
+      keepalive: new TextEncoder().encode(body).byteLength <= 60 * 1024,
     });
     return readJson(response);
   }
@@ -280,6 +284,7 @@
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) flushPendingSave();
   });
+  window.addEventListener("pagehide", flushPendingSave);
 
   // This in-app navigation can wait for an acknowledgement. Tab close/reload cannot.
   backLink.addEventListener("click", async (event) => {

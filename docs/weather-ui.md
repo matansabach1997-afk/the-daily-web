@@ -1,6 +1,6 @@
 # Public weather widget
 
-The home/feed page renders a small weather aside above its filters. It defaults to Tel Aviv, matching the existing backend's documented example. The city is a non-secret `data-city` attribute in `views/index.ejs`; no geolocation, city-picker feature or second provider integration is introduced.
+The home/feed page renders its weather aside in a right-hand sidebar beside the feed on screens wider than 768px. At 768px and below it stacks above the feed, so infinite scrolling never pushes it out of reach. It defaults to Tel Aviv, matching the existing backend's documented example. The city is a non-secret `data-city` attribute in `views/index.ejs`; no geolocation, city-picker feature or second provider integration is introduced.
 
 ## Existing API reused unchanged
 

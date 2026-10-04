@@ -1,4 +1,6 @@
 const Article = require("../models/Article");
+const Comment = require("../models/Comment");
+const ViewStat = require("../models/ViewStat");
 const { categories, contentLimits } = require("../config/articleRules");
 const { allowedFields, text, id } = require("../utils/validation");
 const requireActor = require("../utils/authorization");
@@ -103,8 +105,11 @@ async function startRevision(actor, articleId) {
 
 async function deleteArticle(actor, articleId) {
   requireActor(actor, ["editor"]);
-  // Idempotent hard deletion. Dependent feature collections are not implemented yet.
-  await Article.deleteOne({ _id: id(articleId) });
+  const key = id(articleId);
+  // Remove public access first. Retrying DELETE also cleans up after partial failure.
+  await Article.deleteOne({ _id: key }).maxTimeMS(5000);
+  await Comment.deleteMany({ article: key }).maxTimeMS(5000);
+  await ViewStat.deleteMany({ article: key }).maxTimeMS(5000);
 }
 
 module.exports = { validateContent, createDraft, saveWorkingContent, submit, returnForCorrections, approve, startRevision, deleteArticle };

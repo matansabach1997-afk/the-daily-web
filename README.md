@@ -61,7 +61,7 @@ After bootstrapping an Editor, use the protected User API to create/manage Repor
 
 `publishedAt` always means **first publication**. Each approval appends its timestamp to `publicationHistory`. A pending/returned/draft revision never hides or replaces the previous public content.
 
-Central Comments adds guest posting/list UI and a BrowserIdentity throttle record, not trusted physical-device identification. Stronger anti-abuse, guest edit/delete, moderation UI, dependent cleanup, ReadReceipt and ViewStat management Update/Delete are outside this integration. Teammate Reporter/Editor/Weather/Seed work is not changed by it. Client-reported view counting is not an abuse-proof or unique-reader metric.
+Central Comments adds guest posting/list UI and a BrowserIdentity throttle record, not trusted physical-device identification. Stronger anti-abuse, guest edit/delete, moderation UI and ReadReceipt remain outside this integration. Editor-only Article deletion now also deletes its Comments and ViewStats; retry the same DELETE after partial cleanup failure. ViewStat counter increments provide Update, and dependent deletion provides Delete, without exposing arbitrary deletion to guests. Client-reported view counting is not an abuse-proof or unique-reader metric.
 
 After this update, run `npm.cmd run db:indexes` to register Comment's article/time index and BrowserIdentity's expiry TTL index. Existing authenticated Comment records need no data migration. No new dependency is required.
 
@@ -80,6 +80,28 @@ Open `/login` and use an account created through the existing account script or 
 Navigation displays the current username/role. `public/js/main.js` checks `GET /api/auth/session` on page display (including Back/Forward restores) and sends `DELETE /api/auth/session` for Logout. `public/js/login.js` handles only the login form. Neither script stores credentials/tokens or decides server permissions. Login/Logout require JavaScript; the login fields remain disabled until their submit handler is attached, preventing accidental password submission in a URL.
 
 New pages should reuse `views/partials/header.ejs`, `navigation.ejs` and `footer.ejs`, with their own `<main id="main-content">`. Use `public/css/base.css` for the shell, and page-specific CSS/JS for features. `style.css` retains the existing home/error detail. See [team extension points](docs/team-workflow.md#shared-ui-extension-points).
+
+## Repeatable local demo seed
+
+Use an idle local development/demo database, never production. Set `MONGODB_URI` in the ignored `.env`, then provide its **exact database name** as the script argument (the old generic `development` argument is no longer accepted unless that is actually the database name). Choose a private 12-128-character `SEED_PASSWORD` using a prompt, not a literal in shell history:
+
+```powershell
+$demoDatabase = Read-Host 'Exact local database name from MONGODB_URI'
+$demoSecret = Read-Host 'Demo password (12-128 characters)' -AsSecureString
+try {
+  $env:SEED_PASSWORD = [System.Net.NetworkCredential]::new('', $demoSecret).Password
+  node --env-file-if-exists=.env scripts/seed-articles.js $demoDatabase
+} finally {
+  Remove-Item Env:SEED_PASSWORD -ErrorAction SilentlyContinue
+  $demoSecret.Dispose()
+}
+```
+
+The script creates `demo_reporter_1`, `demo_reporter_2`, `demo_reporter_3`, and `demo_editor` with salted password hashes. Existing demo passwords are preserved. Reserved-name/ID collisions fail before data changes. It creates 500 articles (125 per status, across all five categories), including incomplete drafts, complete pending/published content and a bundled local image. Three working revisions retain their approved public copies; 45 stories have two approved update markers. There are 256 comments and 7,760 time-distributed ViewStat buckets, with more views after updates to illustrate the analytics graph.
+
+Reruns replace only the 500 reserved demo article IDs, reset their dependent comments/views and preserve unrelated records/users. This intentionally resets edits and interactions on those demo articles; stop demo traffic first. No whole-database deletion or transaction is used. A stopped run can be rerun. Legacy random-ID records from the old seed are left alone: use a fresh dedicated demo database to avoid mixing old and new datasets. Never commit the password or seed the development database as part of automated tests.
+
+Reporter saves now flush on blur, pagehide and hidden visibilitychange, with keepalive for small requests. Submit/Back still await the complete serialized queue. MongoDB remains the source of truth. Pending work behind an in-flight save, large payloads, offline exits and forced termination cannot be guaranteed; see [autosave limits](docs/article-workflow.md#autosave-integration). The weather widget is now a responsive sidebar; its backend/API/cache is unchanged.
 
 ## Checks
 
