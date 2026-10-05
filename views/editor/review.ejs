@@ -1,8 +1,87 @@
 <%- include("../partials/header") %>
 <main id="main-content" class="container editor-workspace" data-article-id="<%= articleId %>">
-  <h1><%= title %></h1>
-  <p class="scaffold-notice">Article review scaffold. No article content has been loaded and no editorial action is available yet.</p>
-  <p><a href="/editor">Back to Editor Workspace</a></p>
+  <header class="editor-page-heading editor-review-heading">
+    <a id="editor-back-link" href="/editor">&larr; Back to Editor Workspace</a>
+    <p class="editor-kicker">Newsroom / Review desk</p>
+    <h1><%= title %></h1>
+  </header>
+  <div class="editor-feedback-bar">
+    <p id="review-feedback" role="status" aria-live="polite">Loading article...</p>
+    <button id="reload-button" type="button">Reload article</button>
+  </div>
+  <div id="field-errors" role="alert"></div>
+  <div id="review-content" hidden>
+    <div class="editor-review-meta">
+      <p id="article-meta"></p>
+      <p>Status: <strong id="article-status" class="editor-status"></strong></p>
+    </div>
+    <p id="previous-note" class="editor-plain-text" hidden></p>
+    <div class="editor-comparison">
+      <section class="editor-working" aria-labelledby="working-heading">
+        <p class="editor-kicker">Submitted version</p>
+        <h2 id="working-heading">Working content</h2>
+        <p class="editor-section-description">Review and edit below. Save before leaving; approval publishes this version.</p>
+        <form id="article-form">
+          <fieldset id="content-fields" disabled>
+            <label for="article-title">Title</label>
+            <input id="article-title" maxlength="200">
+            <label for="article-summary">Summary</label>
+            <textarea id="article-summary" maxlength="500" rows="3"></textarea>
+            <label for="article-body">Body (plain text)</label>
+            <textarea id="article-body" maxlength="50000" rows="10"></textarea>
+            <div class="editor-field-pair">
+            <div>
+            <label for="article-category">Category</label>
+            <select id="article-category">
+              <option value="">Choose a category</option>
+              <% for (const category of ["technology", "science", "culture", "sport", "local"]) { %>
+                <option value="<%= category %>"><%= category %></option>
+              <% } %>
+            </select>
+            </div>
+            <div>
+            <label for="article-image-url">Image URL</label>
+            <input id="article-image-url" maxlength="2048" aria-describedby="image-help">
+            <p id="image-help">Use an HTTPS URL or a local /images/ file path.</p>
+            </div>
+            </div>
+          </fieldset>
+        </form>
+      </section>
+      <section class="editor-published" aria-labelledby="published-heading">
+        <p class="editor-kicker">Public version / Read only</p>
+        <h2 id="published-heading">Currently published content</h2>
+        <p id="publication-message"></p>
+        <dl id="published-content"></dl>
+      </section>
+    </div>
+    <section class="editor-actions" aria-labelledby="actions-heading">
+      <div class="editor-action-heading">
+      <div>
+      <h2 id="actions-heading">Editorial actions</h2>
+      <p id="action-help"></p>
+      </div>
+      <div class="editor-primary-actions">
+        <button id="save-button" type="submit" form="article-form">Save changes</button>
+        <button id="approve-button" type="button">Approve and publish</button>
+      </div>
+      </div>
+      <div class="editor-secondary-actions">
+      <form id="return-form">
+        <label for="editor-note">Return with a correction note</label>
+        <p class="editor-section-description" id="note-help">Tell the reporter what needs to change before approval.</p>
+        <textarea id="editor-note" required maxlength="2000" rows="3" aria-describedby="note-help"></textarea>
+        <button id="return-button" type="submit">Return to reporter</button>
+      </form>
+      <div class="editor-delete-area">
+      <h3>Delete article</h3>
+      <p>Deleting permanently removes the article, its comments, and its view statistics.</p>
+      <button id="delete-button" class="editor-danger" type="button">Delete article</button>
+      </div>
+      </div>
+    </section>
+  </div>
+  <noscript>Enable JavaScript to load content and use editorial actions.</noscript>
 </main>
 <script src="/js/editor/review.js" defer></script>
 <%- include("../partials/footer") %>

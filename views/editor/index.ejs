@@ -1,7 +1,29 @@
 <%- include("../partials/header") %>
 <main id="main-content" class="container editor-workspace">
-  <h1><%= title %></h1>
-  <p class="scaffold-notice">Editor workspace scaffold. The review queue and editorial actions are not implemented yet.</p>
+  <header class="editor-page-heading">
+    <p class="editor-kicker">Newsroom / Editorial desk</p>
+    <h1><%= title %></h1>
+    <p>Review submissions and manage articles across the system.</p>
+  </header>
+  <div class="editor-toolbar">
+    <label for="status-filter">Article status</label>
+    <select id="status-filter">
+      <option value="pending" selected>Pending approval</option>
+      <option value="">All articles</option>
+      <option value="draft">Draft</option>
+      <option value="returned">Returned</option>
+      <option value="published">Published</option>
+    </select>
+    <button id="refresh-button" type="button">Refresh</button>
+  </div>
+  <p id="queue-feedback" role="status" aria-live="polite"></p>
+  <section class="editor-queue" aria-label="Articles">
+    <div class="editor-section-heading"><h2>Article queue</h2><span>Latest updates first</span></div>
+    <div id="article-list"></div>
+    <p id="empty-message" hidden>No articles match this status. Choose another status or refresh the queue.</p>
+    <div class="editor-pagination"><button id="load-more-button" type="button" hidden>Load more articles</button></div>
+  </section>
+  <noscript>Enable JavaScript to load articles and use the review workspace.</noscript>
 </main>
 <script src="/js/editor/index.js" defer></script>
 <%- include("../partials/footer") %>

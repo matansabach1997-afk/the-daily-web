@@ -1,4 +1,5 @@
 const { id } = require("../utils/validation");
+const { findAccessibleArticle } = require("../services/articleQueryService");
 
 function showWorkspace(req, res) {
   res.render("editor/index", {
@@ -7,12 +8,13 @@ function showWorkspace(req, res) {
   });
 }
 
-function showReview(req, res) {
-  // Scaffold only: validate the URL ID, but do not read or change an article.
+async function showReview(req, res) {
+  const articleId = id(req.params.id);
+  await findAccessibleArticle(req.user, articleId);
   res.render("editor/review", {
     title: "Editor Article Review",
     pageStylesheet: "/css/editor.css",
-    articleId: id(req.params.id),
+    articleId,
   });
 }
 
